@@ -1,3 +1,4 @@
+import Constants from 'expo-constants';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
@@ -39,6 +40,9 @@ function getMapsUrl(address: string): string {
   return `https://www.google.com/maps/search/?api=1&query=${encoded}`;
 }
 
+// Austin, TX fallback when geocoding fails; stable ref so fetchEvent doesn't re-run every render
+const DEFAULT_REGION = { latitude: 30.2672, longitude: -97.7431, latitudeDelta: 0.05, longitudeDelta: 0.05 };
+
 export default function EventDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -48,13 +52,11 @@ export default function EventDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [rsvpLoading, setRsvpLoading] = useState(false);
-  // Austin, TX fallback when geocoding fails so the map always shows on native
-  const DEFAULT_REGION = { latitude: 30.2672, longitude: -97.7431, latitudeDelta: 0.05, longitudeDelta: 0.05 };
   const [region, setRegion] = useState<{
     latitude: number;
     longitude: number;
-    latitudeDelta?: number;
-    longitudeDelta?: number;
+    latitudeDelta: number;
+    longitudeDelta: number;
   } | null>(null);
   const [hasRealCoords, setHasRealCoords] = useState(false);
 
@@ -74,13 +76,15 @@ export default function EventDetailScreen() {
         geocodeAddress(data.where).then((coords) => {
           if (coords) {
             setRegion({
-              ...coords,
+              latitude: coords.latitude,
+              longitude: coords.longitude,
               latitudeDelta: 0.01,
               longitudeDelta: 0.01,
             });
             setHasRealCoords(true);
           } else {
             setRegion(DEFAULT_REGION);
+            setHasRealCoords(false);
           }
         });
       }
@@ -235,9 +239,9 @@ export default function EventDetailScreen() {
         </ScrollView>
       </View>
 
-      {/* Bottom half: map (shows loading until region is ready) */}
+      {/* Bottom half: map (shows loading until region is ready). Skip MapView on iOS Simulator to avoid GeoServices "default.csv" error. */}
       <View style={styles.mapHalf}>
-        {Platform.OS !== 'web' && region ? (
+        {Platform.OS !== 'web' && !!region ? (
           <MapErrorBoundary
             fallback={
               <Pressable style={styles.mapPlaceholder} onPress={openNavigation}>
@@ -250,11 +254,11 @@ export default function EventDetailScreen() {
             <View style={styles.mapWrapper}>
               <MapView
                 style={styles.map}
-                initialRegion={{
+                region={{
                   latitude: region.latitude,
                   longitude: region.longitude,
-                  latitudeDelta: region.latitudeDelta ?? 0.01,
-                  longitudeDelta: region.longitudeDelta ?? 0.01,
+                  latitudeDelta: region.latitudeDelta,
+                  longitudeDelta: region.longitudeDelta,
                 }}
                 scrollEnabled
                 zoomEnabled

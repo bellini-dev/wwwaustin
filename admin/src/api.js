@@ -34,15 +34,35 @@ export async function createEvent(token, event) {
   return data;
 }
 
+const DEBUG_GEOCODE = import.meta.env.DEV;
+
 export async function geocodeAddress(address) {
   const q = address.trim() ? `${address.trim()}, Austin, TX` : '';
+  if (DEBUG_GEOCODE) {
+    console.log('[Geocode] input:', address?.trim() || '(empty)');
+    console.log('[Geocode] query:', q || '(empty, returning null)');
+  }
   if (!q) return null;
-  const res = await fetch(
-    `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`,
-    { headers: { 'User-Agent': 'WWW-Austin-Admin (contact@example.com)' } }
-  );
+  const qEncoded = encodeURIComponent(q);
+  const url = `https://nominatim.openstreetmap.org/search?q=${qEncoded}&format=jsonv2&limit=1`;
+  if (DEBUG_GEOCODE) console.log('[Geocode] url:', url);
+  const res = await fetch(url, {
+    method: 'GET',
+    headers: { 'User-Agent': 'postman' },
+    redirect: 'follow',
+  });
+  if (DEBUG_GEOCODE) console.log('[Geocode] status:', res.status);
+  if (!res.ok) {
+    if (DEBUG_GEOCODE) console.log('[Geocode] HTTP error', res.status);
+    return null;
+  }
   const data = await res.json();
-  if (!Array.isArray(data) || data.length === 0) return null;
-  const { lat, lon } = data[0];
-  return { lat: parseFloat(lat), lng: parseFloat(lon) };
+  if (!Array.isArray(data) || data.length === 0) {
+    if (DEBUG_GEOCODE) console.log('[Geocode] no results');
+    return null;
+  }
+  const { lat, lon, display_name } = data[0];
+  const result = { lat: parseFloat(lat), lng: parseFloat(lon) };
+  if (DEBUG_GEOCODE) console.log('[Geocode] result:', result, 'display_name:', display_name);
+  return result;
 }
