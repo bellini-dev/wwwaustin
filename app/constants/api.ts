@@ -1,0 +1,30 @@
+import Constants from 'expo-constants';
+import { Platform } from 'react-native';
+
+const API_PORT = '3001';
+
+function getApiBaseUrl(): string {
+  const envUrl =
+    typeof process !== 'undefined' &&
+    (process as { env?: { EXPO_PUBLIC_API_URL?: string } }).env?.EXPO_PUBLIC_API_URL;
+  if (envUrl) return envUrl;
+
+  // Android emulator: 10.0.2.2 is the host machine's localhost
+  if (Platform.OS === 'android') {
+    return `http://192.168.1.4:${API_PORT}`;
+  }
+
+  // Use same host as Metro bundler (local network IP when running on device)
+  const hostUri =
+    Constants.expoConfig?.hostUri ?? Constants.manifest?.debuggerHost ?? '';
+  if (hostUri) {
+    const host = hostUri.split(':')[0];
+    if (host && host !== 'localhost' && host !== '127.0.0.1') {
+      return `http://${host}:${API_PORT}`;
+    }
+  }
+
+  return `http://localhost:${API_PORT}`;
+}
+
+export const API_BASE_URL = getApiBaseUrl();
