@@ -2,6 +2,7 @@ import { Link, router } from 'expo-router';
 import { useState } from 'react';
 import {
   ActivityIndicator,
+  ImageBackground,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -13,6 +14,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/context/auth-context';
 import { Blue } from '@/constants/theme';
+
+const authBg = require('../../assets/images/IMG_2554.png');
 
 export default function SignUpScreen() {
   const { signUp } = useAuth();
@@ -45,11 +48,13 @@ export default function SignUpScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={[styles.container, { paddingTop: insets.top + 48, paddingBottom: insets.bottom + 24 }]}
-    >
-      <View style={styles.header}>
+    <ImageBackground source={authBg} style={styles.background} resizeMode="cover">
+      <View style={styles.overlay} />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={[styles.container, { paddingTop: insets.top + 48, paddingBottom: insets.bottom + 24 }]}
+      >
+        <View style={styles.header}>
         <Text style={styles.brand}>When Where What Austin</Text>
         <Text style={styles.title}>Create account</Text>
         <Text style={styles.subtitle}>Sign up to RSVP to events</Text>
@@ -108,14 +113,21 @@ export default function SignUpScreen() {
           </Pressable>
         </Link>
       </View>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
+  background: {
+    flex: 1,
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+  },
   container: {
     flex: 1,
-    backgroundColor: Blue.background,
     paddingHorizontal: 24,
     justifyContent: 'space-between',
   },
@@ -125,26 +137,35 @@ const styles = StyleSheet.create({
   brand: {
     fontSize: 42,
     fontWeight: '700',
-    color: Blue.primary,
+    color: '#fff',
     marginBottom: 24,
     letterSpacing: -0.5,
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: Blue.text,
+    color: '#fff',
     letterSpacing: -0.5,
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
   subtitle: {
     fontSize: 16,
-    color: Blue.textSecondary,
+    color: 'rgba(255,255,255,0.9)',
     marginTop: 8,
+    textShadowColor: 'rgba(0,0,0,0.4)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   form: {
     gap: 16,
   },
   input: {
-    backgroundColor: Blue.surface,
+    backgroundColor: 'rgba(255,255,255,0.95)',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -179,11 +200,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   footerText: {
-    color: Blue.textSecondary,
+    color: 'rgba(255,255,255,0.9)',
     fontSize: 15,
   },
   link: {
-    color: Blue.primary,
+    color: '#fff',
     fontSize: 15,
     fontWeight: '600',
   },

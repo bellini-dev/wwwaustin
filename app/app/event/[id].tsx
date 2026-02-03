@@ -63,13 +63,14 @@ export default function EventDetailScreen() {
   } | null>(null);
   const [hasRealCoords, setHasRealCoords] = useState(false);
 
-  const fetchEvent = useCallback(async () => {
+  const fetchEvent = useCallback(async (skipGeocode = false) => {
     if (!id) return;
     try {
       const data = await getEvent(id, token ?? undefined);
       setEvent(data);
       setError('');
       setLoading(false);
+      if (skipGeocode) return;
       if (!data.where) {
         setRegion(DEFAULT_REGION);
         setHasRealCoords(false);
@@ -135,7 +136,7 @@ export default function EventDetailScreen() {
     setRsvpLoading(true);
     try {
       await rsvpEvent(id, token);
-      await fetchEvent();
+      await fetchEvent(true);
     } finally {
       setRsvpLoading(false);
     }
@@ -146,7 +147,7 @@ export default function EventDetailScreen() {
     setRsvpLoading(true);
     try {
       await removeRsvp(id, token);
-      await fetchEvent();
+      await fetchEvent(true);
     } finally {
       setRsvpLoading(false);
     }

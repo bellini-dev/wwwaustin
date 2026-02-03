@@ -7,14 +7,14 @@
     "icon": "./assets/images/icon.png",
     "scheme": "wwwaustin",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.bellini.dev.wwwaustin",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       },
-      "appleTeamId": "NXHTNC439D"
+      "appleTeamId": "29D4TTNP95"
     },
     "android": {
       "adaptiveIcon": {
@@ -38,6 +38,7 @@
     },
     "plugins": [
       "expo-router",
+      "expo-image-picker",
       "./plugins/withGoogleMapsApiKey.js",
       [
         "expo-splash-screen",

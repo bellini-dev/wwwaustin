@@ -37,6 +37,14 @@ CREATE INDEX IF NOT EXISTS idx_rsvps_event_id ON rsvps(event_id);
 CREATE INDEX IF NOT EXISTS idx_rsvps_user_id ON rsvps(user_id);
 CREATE INDEX IF NOT EXISTS idx_events_datetime ON events(datetime);
 
+-- Profile pictures: one per user, binary up to 2 MB
+CREATE TABLE IF NOT EXISTS profile_pics (
+  user_id     UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  data        BYTEA NOT NULL,
+  content_type TEXT NOT NULL DEFAULT 'image/jpeg',
+  updated_at  TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Admin users: no API to create; use scripts/create-admin.js only
 CREATE TABLE IF NOT EXISTS admin_users (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),

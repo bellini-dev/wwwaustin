@@ -8,6 +8,12 @@
       "developmentClient": true,
       "distribution": "internal"
     },
+    "development-prod-api": {
+      "extends": "development",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://wwwaustin-production.up.railway.app"
+      }
+    },
     "preview": {
       "distribution": "internal"
     },

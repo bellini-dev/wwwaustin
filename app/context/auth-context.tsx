@@ -7,6 +7,13 @@ const USER_KEY = 'auth_user';
 
 type User = { id: string; email: string; name: string | null };
 
+type ProfileUpdate = {
+  currentPassword: string;
+  email?: string;
+  name?: string;
+  newPassword?: string;
+};
+
 type AuthContextValue = {
   user: User | null;
   token: string | null;
@@ -14,6 +21,8 @@ type AuthContextValue = {
   login: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, name?: string) => Promise<void>;
   logout: () => Promise<void>;
+  updateProfile: (updates: ProfileUpdate) => Promise<void>;
+  uploadAvatar: (base64: string, contentType?: string) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -64,6 +73,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   }, []);
 
+  const updateProfile = useCallback(
+    async (updates: ProfileUpdate) => {
+      if (!token) throw new Error('Not logged in');
+      const res = await fetch(`${API_BASE_URL}/auth/me`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(updates),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || data.errors?.[0]?.msg || 'Update failed');
+      const newUser = data.user as User;
+      await AsyncStorage.setItem(USER_KEY, JSON.stringify(newUser));
+      setUser(newUser);
+    },
+    [token]
+  );
+
+  const uploadAvatar = useCallback(
+    async (base64: string, contentType = 'image/jpeg') => {
+      if (!token) throw new Error('Not logged in');
+      const res = await fetch(`${API_BASE_URL}/auth/me/avatar`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ image: base64, content_type: contentType }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Upload failed');
+    },
+    [token]
+  );
+
   useEffect(() => {
     (async () => {
       try {
@@ -82,8 +128,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ user, token, isLoading, login, signUp, logout }),
-    [user, token, isLoading, login, signUp, logout]
+    () => ({ user, token, isLoading, login, signUp, logout, updateProfile, uploadAvatar }),
+    [user, token, isLoading, login, signUp, logout, updateProfile, uploadAvatar]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

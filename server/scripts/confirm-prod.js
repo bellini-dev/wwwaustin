@@ -1,24 +1,20 @@
 /**
- * Prompts for confirmation when running a DB script against a production-like database.
+ * Prompts for confirmation when running a DB script against the production database.
  * Use at the start of init-db, seed-events, migrate-*, create-admin, etc.
  *
- * Production is detected when:
- * - NODE_ENV === 'production', or
- * - DATABASE_URL contains 'prod' or 'production' (case-insensitive), or
- * - DB_TARGET=prod is set
+ * Production is detected when you explicitly target prod:
+ * - DB_USE_PROD=1 or DB_USE_PROD=true (then config/db.js uses DATABASE_URL_PROD)
+ *
+ * Local: npm run db:init  → uses DATABASE_URL, no prompt.
+ * Prod:  DB_USE_PROD=1 npm run db:init  → uses DATABASE_URL_PROD, prompt then run.
  *
  * Usage: await confirmProdDb('db:init');
  */
 const readline = require('readline');
 
 function looksLikeProd() {
-  const url = (process.env.DATABASE_URL || '').toLowerCase();
-  const nodeEnv = (process.env.NODE_ENV || '').toLowerCase();
-  const dbTarget = (process.env.DB_TARGET || '').toLowerCase();
-  if (nodeEnv === 'production') return true;
-  if (dbTarget === 'prod' || dbTarget === 'production') return true;
-  if (url.includes('prod') || url.includes('production')) return true;
-  return false;
+  const useProd = (process.env.DB_USE_PROD || '').toString().toLowerCase();
+  return useProd === '1' || useProd === 'true';
 }
 
 function confirmProdDb(scriptName) {
@@ -30,7 +26,7 @@ function confirmProdDb(scriptName) {
     console.error('');
     console.error('*** WARNING: PRODUCTION DATABASE ***');
     console.error('You are about to run:', scriptName);
-    console.error('DATABASE_URL appears to point at a production database.');
+    console.error('You are targeting the production database (DATABASE_URL_PROD).');
     console.error('');
     console.error('This can overwrite or change production data.');
     console.error("Type 'yes' and press Enter to continue, or press Ctrl+C / enter anything else to abort.");

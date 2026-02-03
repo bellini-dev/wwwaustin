@@ -3,11 +3,19 @@ import { Platform } from 'react-native';
 
 const API_PORT = '3001';
 
+/** Production API host (override with EXPO_PUBLIC_API_URL if needed). */
+export const PROD_API_BASE_URL = 'https://wwwaustin-production.up.railway.app';
+
 function getApiBaseUrl(): string {
   const envUrl =
     typeof process !== 'undefined' &&
     (process as { env?: { EXPO_PUBLIC_API_URL?: string } }).env?.EXPO_PUBLIC_API_URL;
   if (envUrl) return envUrl;
+
+  // Production / release build: use Railway host unless EXPO_PUBLIC_API_URL is set
+  if (typeof __DEV__ === 'boolean' && !__DEV__) {
+    return PROD_API_BASE_URL;
+  }
 
   // Android emulator: 10.0.2.2 is the host machine's localhost
   if (Platform.OS === 'android') {

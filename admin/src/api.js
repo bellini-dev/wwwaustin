@@ -1,4 +1,7 @@
-const API_URL = import.meta.env.VITE_API_URL || '';
+const PROD_API_URL = 'https://wwwaustin-production.up.railway.app';
+const API_URL =
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.MODE === 'production' ? PROD_API_URL : 'http://localhost:3001');
 
 export async function adminLogin(email, password) {
   const res = await fetch(`${API_URL}/admin/login`, {
