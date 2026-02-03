@@ -1,4 +1,5 @@
 require('dotenv').config();
+const { confirmProdDb } = require('./confirm-prod');
 const { pool } = require('../config/db');
 
 const sampleEvents = [
@@ -54,6 +55,7 @@ const sampleEvents = [
 ];
 
 async function seed() {
+  await confirmProdDb('db:seed');
   for (const event of sampleEvents) {
     await pool.query(
       `INSERT INTO events (what, "where", datetime, free_food, free_drinks) VALUES ($1, $2, $3, $4, $5)`,

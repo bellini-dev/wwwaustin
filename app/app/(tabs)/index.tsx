@@ -42,22 +42,18 @@ function EventCard({
 }) {
   const [loading, setLoading] = useState(false);
   const myRsvp = event.rsvps?.find((r) => r.user_id === userId);
-  const yesCount = event.rsvps?.filter((r) => r.status === 'yes').length ?? 0;
-  const maybeCount = event.rsvps?.filter((r) => r.status === 'maybe').length ?? 0;
+  const interestedCount = event.rsvps?.filter((r) => r.status === 'interested').length ?? 0;
 
-  const setRsvp = useCallback(
-    async (status: 'yes' | 'maybe') => {
-      if (loading) return;
-      setLoading(true);
-      try {
-        await rsvpEvent(event.id, status, token);
-        onRsvpChange();
-      } finally {
-        setLoading(false);
-      }
-    },
-    [event.id, token, loading, onRsvpChange]
-  );
+  const setInterested = useCallback(async () => {
+    if (loading) return;
+    setLoading(true);
+    try {
+      await rsvpEvent(event.id, token);
+      onRsvpChange();
+    } finally {
+      setLoading(false);
+    }
+  }, [event.id, token, loading, onRsvpChange]);
 
   const clearRsvp = useCallback(async () => {
     if (loading) return;
@@ -82,27 +78,15 @@ function EventCard({
           <Pressable
             style={[
               styles.rsvpBtn,
-              myRsvp?.status === 'yes' && styles.rsvpBtnActive,
+              myRsvp?.status === 'interested' && styles.rsvpBtnActive,
               loading && styles.rsvpBtnDisabled,
             ]}
-            onPress={() => (myRsvp?.status === 'yes' ? clearRsvp() : setRsvp('yes'))}
+            onPress={() => (myRsvp?.status === 'interested' ? clearRsvp() : setInterested())}
             disabled={loading}
           >
-            <Text style={[styles.rsvpBtnText, myRsvp?.status === 'yes' && styles.rsvpBtnTextActive]}>
-              Yes{yesCount > 0 ? ` ${yesCount}` : ''}
-            </Text>
-          </Pressable>
-          <Pressable
-            style={[
-              styles.rsvpBtn,
-              myRsvp?.status === 'maybe' && styles.rsvpBtnActive,
-              loading && styles.rsvpBtnDisabled,
-            ]}
-            onPress={() => (myRsvp?.status === 'maybe' ? clearRsvp() : setRsvp('maybe'))}
-            disabled={loading}
-          >
-            <Text style={[styles.rsvpBtnText, myRsvp?.status === 'maybe' && styles.rsvpBtnTextActive]}>
-              Maybe{maybeCount > 0 ? ` ${maybeCount}` : ''}
+            <Text style={[styles.rsvpBtnText, myRsvp?.status === 'interested' && styles.rsvpBtnTextActive]}>
+              {myRsvp?.status === 'interested' ? "I'm Interested" : 'Interested'}
+              {interestedCount > 0 ? ` ${interestedCount}` : ''}
             </Text>
           </Pressable>
         </View>
@@ -244,12 +228,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: '#fff',
-    marginBottom: 4,
+    marginBottom: 12,
   },
   where: {
     fontSize: 15,
     color: 'rgba(255,255,255,0.9)',
-    marginBottom: 4,
+    marginBottom: 8,
   },
   datetime: {
     fontSize: 14,
@@ -286,7 +270,7 @@ const styles = StyleSheet.create({
   },
   rsvpBtnActive: {
     backgroundColor: Blue.primary,
-    borderColor: Blue.primary,
+    // borderColor: Blue.primary,
   },
   rsvpBtnDisabled: {
     opacity: 0.6,

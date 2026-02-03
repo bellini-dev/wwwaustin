@@ -23,12 +23,12 @@ CREATE TABLE IF NOT EXISTS events (
 ALTER TABLE events ADD COLUMN IF NOT EXISTS free_food BOOLEAN DEFAULT FALSE;
 ALTER TABLE events ADD COLUMN IF NOT EXISTS free_drinks BOOLEAN DEFAULT FALSE;
 
--- RSVPs: yes or maybe per user per event
+-- RSVPs: interested per user per event
 CREATE TABLE IF NOT EXISTS rsvps (
   id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   event_id   UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
-  status     TEXT NOT NULL CHECK (status IN ('yes', 'maybe')),
+  status     TEXT NOT NULL CHECK (status IN ('interested')),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(user_id, event_id)
 );

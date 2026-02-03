@@ -1,12 +1,14 @@
-import Constants from 'expo-constants';
+import { useNavigation } from '@react-navigation/native';
+import * as Linking from 'expo-linking';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Linking,
+  Linking as RNLinking,
   Platform,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   View,
@@ -46,6 +48,7 @@ const DEFAULT_REGION = { latitude: 30.2672, longitude: -97.7431, latitudeDelta: 
 export default function EventDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { user, token } = useAuth();
   const [event, setEvent] = useState<Event | null>(null);
@@ -101,24 +104,42 @@ export default function EventDetailScreen() {
   const openNavigation = useCallback(() => {
     if (!event?.where) return;
     const url = getMapsUrl(event.where);
-    Linking.openURL(url);
+    RNLinking.openURL(url);
   }, [event?.where]);
+
+  const shareEvent = useCallback(() => {
+    if (!id || !event) return;
+    const url = Linking.createURL(`event/${id}`);
+    const message = Platform.OS === 'ios'
+      ? `${event.what} – ${event.where}\n${url}`
+      : undefined;
+    Share.share({
+      message: message ?? url,
+      url: Platform.OS === 'ios' ? url : undefined,
+      title: event.what,
+    }).catch(() => {});
+  }, [id, event]);
+
+  const closeModal = useCallback(() => {
+    if (navigation.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(tabs)');
+    }
+  }, [router, navigation]);
 
   const myRsvp = event?.rsvps?.find((r) => r.user_id === user?.id);
 
-  const setRsvp = useCallback(
-    async (status: 'yes' | 'maybe') => {
-      if (!id || !token || rsvpLoading) return;
-      setRsvpLoading(true);
-      try {
-        await rsvpEvent(id, status, token);
-        await fetchEvent();
-      } finally {
-        setRsvpLoading(false);
-      }
-    },
-    [id, token, rsvpLoading, fetchEvent]
-  );
+  const setInterested = useCallback(async () => {
+    if (!id || !token || rsvpLoading) return;
+    setRsvpLoading(true);
+    try {
+      await rsvpEvent(id, token);
+      await fetchEvent();
+    } finally {
+      setRsvpLoading(false);
+    }
+  }, [id, token, rsvpLoading, fetchEvent]);
 
   const clearRsvp = useCallback(async () => {
     if (!id || !token || rsvpLoading) return;
@@ -135,7 +156,7 @@ export default function EventDetailScreen() {
     return (
       <View style={[styles.container, styles.centered, { paddingTop: insets.top }]}>
         <Text style={styles.error}>Invalid event</Text>
-        <Pressable style={styles.closeBtn} onPress={() => router.back()}>
+        <Pressable style={styles.closeBtn} onPress={closeModal}>
           <Text style={styles.closeBtnText}>Close</Text>
         </Pressable>
       </View>
@@ -154,23 +175,27 @@ export default function EventDetailScreen() {
     return (
       <View style={[styles.container, styles.centered, { paddingTop: insets.top }]}>
         <Text style={styles.error}>{error || 'Event not found'}</Text>
-        <Pressable style={styles.closeBtn} onPress={() => router.back()}>
+        <Pressable style={styles.closeBtn} onPress={closeModal}>
           <Text style={styles.closeBtnText}>Close</Text>
         </Pressable>
       </View>
     );
   }
 
-  const yesCount = event.rsvps?.filter((r) => r.status === 'yes').length ?? 0;
-  const maybeCount = event.rsvps?.filter((r) => r.status === 'maybe').length ?? 0;
+  const interestedCount = event.rsvps?.filter((r) => r.status === 'interested').length ?? 0;
 
   return (
     <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Event details</Text>
-        <Pressable onPress={() => router.back()} hitSlop={12} style={styles.closeBtn}>
-          <Text style={styles.closeBtnText}>Close</Text>
-        </Pressable>
+        <View style={styles.headerActions} pointerEvents="box-none">
+          <Pressable onPress={shareEvent} hitSlop={12} style={styles.headerBtn}>
+            <Text style={styles.headerBtnText}>Share</Text>
+          </Pressable>
+          <Pressable onPress={closeModal} hitSlop={12} style={styles.closeBtn}>
+            <Text style={styles.closeBtnText}>Close</Text>
+          </Pressable>
+        </View>
       </View>
 
       {/* Top half: details */}
@@ -191,8 +216,7 @@ export default function EventDetailScreen() {
             <Text style={styles.value}>{event.what}</Text>
 
             {/* <View style={styles.counts}>
-              <Text style={styles.countText}>Yes: {yesCount}</Text>
-              <Text style={styles.countText}>Maybe: {maybeCount}</Text>
+              <Text style={styles.countText}>Interested: {interestedCount}</Text>
             </View> */}
 
             <View style={styles.rsvpRow}>
@@ -201,27 +225,15 @@ export default function EventDetailScreen() {
                   <Pressable
                     style={[
                       styles.rsvpBtn,
-                      myRsvp?.status === 'yes' && styles.rsvpBtnActive,
+                      myRsvp?.status === 'interested' && styles.rsvpBtnActive,
                       rsvpLoading && styles.rsvpBtnDisabled,
                     ]}
-                    onPress={() => (myRsvp?.status === 'yes' ? clearRsvp() : setRsvp('yes'))}
+                    onPress={() => (myRsvp?.status === 'interested' ? clearRsvp() : setInterested())}
                     disabled={rsvpLoading}
                   >
-                    <Text style={[styles.rsvpBtnText, myRsvp?.status === 'yes' && styles.rsvpBtnTextActive]}>
-                      Yes{yesCount > 0 ? ` ${yesCount}` : ''}
-                    </Text>
-                  </Pressable>
-                  <Pressable
-                    style={[
-                      styles.rsvpBtn,
-                      myRsvp?.status === 'maybe' && styles.rsvpBtnActive,
-                      rsvpLoading && styles.rsvpBtnDisabled,
-                    ]}
-                    onPress={() => (myRsvp?.status === 'maybe' ? clearRsvp() : setRsvp('maybe'))}
-                    disabled={rsvpLoading}
-                  >
-                    <Text style={[styles.rsvpBtnText, myRsvp?.status === 'maybe' && styles.rsvpBtnTextActive]}>
-                      Maybe{maybeCount > 0 ? ` ${maybeCount}` : ''}
+                    <Text style={[styles.rsvpBtnText, myRsvp?.status === 'interested' && styles.rsvpBtnTextActive]}>
+                      {myRsvp?.status === 'interested' ? "I'm Interested" : 'Interested'}
+                      {interestedCount > 0 ? ` ${interestedCount}` : ''}
                     </Text>
                   </Pressable>
                 </View>
@@ -318,9 +330,30 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Blue.text,
   },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  headerBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    minHeight: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerBtnText: {
+    fontSize: 16,
+    color: Blue.primary,
+    fontWeight: '600',
+  },
   closeBtn: {
-    paddingVertical: 4,
-    paddingHorizontal: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    minWidth: 44,
+    minHeight: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   closeBtnText: {
     fontSize: 16,

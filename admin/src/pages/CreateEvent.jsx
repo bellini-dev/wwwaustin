@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { useAuth } from '../context/AuthContext';
@@ -98,10 +99,27 @@ const styles = {
 
 const AUSTIN_CENTER = { lat: 30.2672, lng: -97.7431 };
 
+function buildAddress(parts) {
+  return [
+    parts.name,
+    parts.street,
+    parts.street2,
+    [parts.city, parts.state].filter(Boolean).join(', '),
+    parts.zip,
+  ]
+    .filter((s) => s != null && String(s).trim() !== '')
+    .join(', ');
+}
+
 export default function CreateEventPage() {
   const { token, logout } = useAuth();
   const [what, setWhat] = useState('');
-  const [where, setWhere] = useState('');
+  const [addressName, setAddressName] = useState('');
+  const [street, setStreet] = useState('');
+  const [street2, setStreet2] = useState('');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('');
+  const [zip, setZip] = useState('');
   const [datetime, setDatetime] = useState('');
   const [freeFood, setFreeFood] = useState(false);
   const [freeDrinks, setFreeDrinks] = useState(false);
@@ -112,8 +130,18 @@ export default function CreateEventPage() {
   const [loading, setLoading] = useState(false);
   const [mapLoading, setMapLoading] = useState(false);
 
+  const addressParts = {
+    name: addressName.trim(),
+    street: street.trim(),
+    street2: street2.trim(),
+    city: city.trim(),
+    state: state.trim(),
+    zip: zip.trim(),
+  };
+  const where = buildAddress(addressParts);
+
   const previewOnMap = useCallback(async () => {
-    if (!where.trim()) return;
+    if (!where) return;
     setMapLoading(true);
     setError('');
     try {
@@ -122,7 +150,7 @@ export default function CreateEventPage() {
         setMapCenter(coords);
         setMarker(coords);
       } else {
-        setError('Address not found. Try including "Austin, TX".');
+        setError('Address not found. Try including city and state (e.g. Austin, TX).');
       }
     } catch {
       setError('Could not find address on map.');
@@ -131,27 +159,31 @@ export default function CreateEventPage() {
     }
   }, [where]);
 
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
-    if (!what.trim() || !where.trim() || !datetime) {
-      setError('What, Where, and Date/time are required.');
+    if (!what.trim() || !where || !datetime) {
+      setError('What, Where (at least one address field), and Date/time are required.');
       return;
     }
     setLoading(true);
     try {
       await createEvent(token, {
         what: what.trim(),
-        where: where.trim(),
+        where,
         datetime: new Date(datetime).toISOString(),
         free_food: freeFood,
         free_drinks: freeDrinks,
       });
       setSuccess('Event created.');
       setWhat('');
-      setWhere('');
+      setAddressName('');
+      setStreet('');
+      setStreet2('');
+      setCity('');
+      setState('');
+      setZip('');
       setDatetime('');
       setFreeFood(false);
       setFreeDrinks(false);
@@ -168,9 +200,14 @@ export default function CreateEventPage() {
     <div style={styles.page}>
       <header style={styles.header}>
         <h1 style={styles.title}>Create Event</h1>
-        <button type="button" style={styles.logout} onClick={logout}>
-          Log out
-        </button>
+        <div>
+          <Link to="/" style={{ ...styles.logout, marginRight: 16, textDecoration: 'none' }}>
+            Events
+          </Link>
+          <button type="button" style={styles.logout} onClick={logout}>
+            Log out
+          </button>
+        </div>
       </header>
 
       <div style={styles.card}>
@@ -185,14 +222,57 @@ export default function CreateEventPage() {
           />
 
           <label style={styles.label}>Where (address)</label>
+          <input
+            type="text"
+            placeholder="Name (e.g. Jo's Coffee)"
+            value={addressName}
+            onChange={(e) => setAddressName(e.target.value)}
+            style={styles.input}
+          />
+          <input
+            type="text"
+            placeholder="Street address"
+            value={street}
+            onChange={(e) => setStreet(e.target.value)}
+            style={styles.input}
+          />
+          <input
+            type="text"
+            placeholder="Street 2 (apt, suite, etc.)"
+            value={street2}
+            onChange={(e) => setStreet2(e.target.value)}
+            style={styles.input}
+          />
           <div style={styles.row}>
-            <input
-              type="text"
-              placeholder="e.g. Jo's Coffee, 1300 South Congress"
-              value={where}
-              onChange={(e) => setWhere(e.target.value)}
-              style={{ ...styles.input, marginBottom: 0 }}
-            />
+            <div style={{ flex: 1 }}>
+              <input
+                type="text"
+                placeholder="City"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                style={styles.input}
+              />
+            </div>
+            <div style={{ flex: 0.5 }}>
+              <input
+                type="text"
+                placeholder="State"
+                value={state}
+                onChange={(e) => setState(e.target.value)}
+                style={styles.input}
+              />
+            </div>
+            <div style={{ flex: 0.5, minWidth: 80 }}>
+              <input
+                type="text"
+                placeholder="ZIP"
+                value={zip}
+                onChange={(e) => setZip(e.target.value)}
+                style={styles.input}
+              />
+            </div>
+          </div>
+          <div style={{ marginTop: 12 }}>
             <button type="button" onClick={previewOnMap} disabled={mapLoading} style={styles.button}>
               {mapLoading ? 'Looking up…' : 'Preview on map'}
             </button>

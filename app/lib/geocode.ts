@@ -33,7 +33,7 @@ export async function geocodeAddress(address: string): Promise<GeocodeResult> {
   const timeoutId = setTimeout(() => controller.abort(), GEOCODE_TIMEOUT_MS);
   const qEncoded = encodeURIComponent(query);
   const url = `${NOMINATIM_BASE}?q=${qEncoded}&format=jsonv2&limit=5`;
-  if (DEBUG_GEOCODE) console.log('[Geocode] url:', url);
+  console.log('[Geocode] lookup URL:', url);
   try {
     const res = await fetch(url, {
       method: 'GET',

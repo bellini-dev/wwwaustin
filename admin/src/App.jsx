@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import Login from './pages/Login';
 import CreateEvent from './pages/CreateEvent';
+import EventList from './pages/EventList';
 
 function ProtectedRoute({ children }) {
   const { token, loading } = useAuth();
@@ -30,6 +31,14 @@ export default function App() {
       />
       <Route
         path="/"
+        element={
+          <ProtectedRoute>
+            <EventList />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/create"
         element={
           <ProtectedRoute>
             <CreateEvent />

@@ -9,7 +9,7 @@ export type Event = {
   free_drinks?: boolean;
   created_at: string;
   updated_at: string;
-  rsvps?: { user_id: string; name: string | null; status: 'yes' | 'maybe' }[];
+  rsvps?: { user_id: string; name: string | null; status: 'interested' }[];
 };
 
 export async function api<T>(
@@ -40,14 +40,10 @@ export async function getEvent(id: string, token?: string): Promise<Event> {
   return api<Event>(`/events/${id}`, { token });
 }
 
-export async function rsvpEvent(
-  eventId: string,
-  status: 'yes' | 'maybe',
-  token: string
-): Promise<unknown> {
+export async function rsvpEvent(eventId: string, token: string): Promise<unknown> {
   return api(`/events/${eventId}/rsvp`, {
     method: 'POST',
-    body: JSON.stringify({ status }),
+    body: JSON.stringify({ status: 'interested' }),
     token,
   });
 }

@@ -4,9 +4,11 @@
  */
 require('dotenv').config();
 const bcrypt = require('bcryptjs');
+const { confirmProdDb } = require('./confirm-prod');
 const { pool } = require('../config/db');
 
 async function createAdmin() {
+  await confirmProdDb('admin:create');
   const email = process.argv[2];
   const password = process.argv[3];
   if (!email || !password) {

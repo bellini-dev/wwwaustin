@@ -1,7 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { body, validationResult } = require('express-validator');
+const { body, param, validationResult } = require('express-validator');
 const { pool } = require('../config/db');
 const { adminAuth } = require('../middleware/adminAuth');
 
@@ -49,6 +49,37 @@ router.get('/me', adminAuth, (req, res) => {
   res.json({ admin: req.admin });
 });
 
+// GET /admin/events – list events with interested count (admin only)
+router.get('/events', adminAuth, async (req, res, next) => {
+  try {
+    const result = await pool.query(
+      `SELECT e.id, e.what, e."where", e.datetime, e.free_food, e.free_drinks, e.created_at, e.updated_at,
+              (SELECT json_agg(json_build_object('user_id', u.id, 'name', u.name, 'status', r.status))
+               FROM rsvps r JOIN users u ON r.user_id = u.id WHERE r.event_id = e.id) AS rsvps
+       FROM events e ORDER BY e.datetime ASC`
+    );
+    const events = result.rows.map((row) => {
+      const rsvps = row.rsvps?.filter(Boolean) || [];
+      const interestedCount = rsvps.filter((r) => r.status === 'interested').length;
+      return {
+        id: row.id,
+        what: row.what,
+        where: row.where,
+        datetime: row.datetime,
+        free_food: row.free_food ?? false,
+        free_drinks: row.free_drinks ?? false,
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+        rsvps,
+        interestedCount,
+      };
+    });
+    res.json(events);
+  } catch (err) {
+    next(err);
+  }
+});
+
 // POST /admin/events – create event (admin only)
 router.post('/events', adminAuth, eventValidation, async (req, res, next) => {
   try {
@@ -62,6 +93,42 @@ router.post('/events', adminAuth, eventValidation, async (req, res, next) => {
     );
     const row = result.rows[0];
     res.status(201).json({ ...row, free_food: row.free_food ?? false, free_drinks: row.free_drinks ?? false });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// PUT /admin/events/:id – update event (admin only)
+router.put('/events/:id', adminAuth, param('id').isUUID(), eventValidation, async (req, res, next) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+    const { id } = req.params;
+    const { what, where, datetime, free_food, free_drinks } = req.body;
+    const result = await pool.query(
+      `UPDATE events SET what = $1, "where" = $2, datetime = $3,
+       free_food = COALESCE($4::boolean, free_food), free_drinks = COALESCE($5::boolean, free_drinks),
+       updated_at = NOW() WHERE id = $6
+       RETURNING id, what, "where", datetime, free_food, free_drinks, created_at, updated_at`,
+      [what, where, datetime, free_food === undefined ? null : !!free_food, free_drinks === undefined ? null : !!free_drinks, id]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Event not found' });
+    const row = result.rows[0];
+    res.json({ ...row, free_food: row.free_food ?? false, free_drinks: row.free_drinks ?? false });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// DELETE /admin/events/:id – delete event (admin only)
+router.delete('/events/:id', adminAuth, param('id').isUUID(), async (req, res, next) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+    const { id } = req.params;
+    const result = await pool.query('DELETE FROM events WHERE id = $1 RETURNING id', [id]);
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Event not found' });
+    res.status(204).send();
   } catch (err) {
     next(err);
   }
