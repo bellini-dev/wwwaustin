@@ -7,14 +7,17 @@ CREATE TABLE IF NOT EXISTS users (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Events: where, what, datetime, free food/drinks
+-- Events: where, what, when (display text), datetime (for sorting), free food/drinks/entry, optional event link
 CREATE TABLE IF NOT EXISTS events (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   what        TEXT NOT NULL,
   "where"     TEXT NOT NULL,
+  "when"      TEXT,
   datetime    TIMESTAMPTZ NOT NULL,
   free_food   BOOLEAN DEFAULT FALSE,
   free_drinks BOOLEAN DEFAULT FALSE,
+  free_entry  BOOLEAN DEFAULT FALSE,
+  event_link  TEXT,
   created_at  TIMESTAMPTZ DEFAULT NOW(),
   updated_at  TIMESTAMPTZ DEFAULT NOW()
 );
@@ -22,6 +25,9 @@ CREATE TABLE IF NOT EXISTS events (
 -- Add columns for existing DBs (no-op if already present)
 ALTER TABLE events ADD COLUMN IF NOT EXISTS free_food BOOLEAN DEFAULT FALSE;
 ALTER TABLE events ADD COLUMN IF NOT EXISTS free_drinks BOOLEAN DEFAULT FALSE;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS free_entry BOOLEAN DEFAULT FALSE;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS event_link TEXT;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS "when" TEXT;
 
 -- RSVPs: interested per user per event
 CREATE TABLE IF NOT EXISTS rsvps (

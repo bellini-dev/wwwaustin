@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { InterestedAvatars } from '@/components/interested-avatars';
 import { useAuth } from '@/context/auth-context';
 import { Blue } from '@/constants/theme';
 import type { Event } from '@/lib/api';
@@ -42,7 +43,6 @@ function EventCard({
 }) {
   const [loading, setLoading] = useState(false);
   const myRsvp = event.rsvps?.find((r) => r.user_id === userId);
-  const interestedCount = event.rsvps?.filter((r) => r.status === 'interested').length ?? 0;
 
   const setInterested = useCallback(async () => {
     if (loading) return;
@@ -71,32 +71,31 @@ function EventCard({
       <Pressable onPress={onPressDetails} style={styles.cardDetails}>
         <Text style={styles.what}>{event.what}</Text>
         <Text style={styles.where}>{event.where}</Text>
-        <Text style={styles.datetime}>{formatDate(event.datetime)}</Text>
+        <Text style={styles.datetime}>
+          {event.when?.trim() ? event.when.trim() : formatDate(event.datetime)}
+        </Text>
       </Pressable>
       <View style={styles.rsvpRow}>
-        <View style={styles.rsvpButtons}>
-          <Pressable
-            style={[
-              styles.rsvpBtn,
-              myRsvp?.status === 'interested' && styles.rsvpBtnActive,
-              loading && styles.rsvpBtnDisabled,
-            ]}
-            onPress={() => (myRsvp?.status === 'interested' ? clearRsvp() : setInterested())}
-            disabled={loading}
-          >
-            <Text style={[styles.rsvpBtnText, myRsvp?.status === 'interested' && styles.rsvpBtnTextActive]}>
-              {myRsvp?.status === 'interested' ? "I'm Interested" : 'Interested'}
-              {interestedCount > 0 ? ` ${interestedCount}` : ''}
-            </Text>
-          </Pressable>
+        <Pressable
+          style={[
+            styles.rsvpBtn,
+            myRsvp?.status === 'interested' && styles.rsvpBtnActive,
+            loading && styles.rsvpBtnDisabled,
+          ]}
+          onPress={() => (myRsvp?.status === 'interested' ? clearRsvp() : setInterested())}
+          disabled={loading}
+        >
+          <Text style={[styles.rsvpBtnText, myRsvp?.status === 'interested' && styles.rsvpBtnTextActive]}>
+            {myRsvp?.status === 'interested' ? "I'm Interested" : 'Interested'}
+          </Text>
+        </Pressable>
+        <View style={styles.perksList}>
+          {event.free_food && <Text style={styles.perkText}>Free Food!</Text>}
+          {event.free_drinks && <Text style={styles.perkText}>Free Drinks!</Text>}
+          {event.free_entry && <Text style={styles.perkText}>Free Entry!</Text>}
         </View>
-        {(event.free_food || event.free_drinks) && (
-          <View style={styles.perks}>
-            {event.free_food && <Text style={styles.perkEmoji}>🍕</Text>}
-            {event.free_drinks && <Text style={styles.perkEmoji}>🍺</Text>}
-          </View>
-        )}
       </View>
+      <InterestedAvatars rsvps={event.rsvps ?? []} token={token} />
     </View>
   );
 }
@@ -113,7 +112,10 @@ export default function FeedScreen() {
   const fetchEvents = useCallback(async () => {
     try {
       const list = await getEvents(token ?? undefined);
-      setEvents(list);
+      const sorted = [...list].sort(
+        (a, b) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime()
+      );
+      setEvents(sorted);
       setError('');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load events');
@@ -139,7 +141,7 @@ export default function FeedScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
       <View style={styles.header}>
-        <Text style={styles.title}>WWW Austin</Text>
+        <Text style={styles.title}>When Where What</Text>
         <Pressable onPress={() => logout().then(() => router.replace('/(auth)/login'))} hitSlop={12}>
           <Text style={styles.logout}>Log out</Text>
         </Pressable>
@@ -196,17 +198,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: Blue.border,
-    backgroundColor: Blue.surface,
+    borderBottomColor: Blue.primaryDark,
+    backgroundColor: Blue.primary,
   },
   title: {
     fontSize: 22,
     fontWeight: '700',
-    color: Blue.text,
+    color: '#fff',
   },
   logout: {
     fontSize: 15,
-    color: Blue.primary,
+    color: '#fff',
     fontWeight: '500',
   },
   list: {
@@ -245,32 +247,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 12,
-  },
-  rsvpButtons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  perks: {
-    flexDirection: 'row',
-    gap: 6,
-    alignItems: 'center',
-  },
-  perkEmoji: {
-    fontSize: 22,
+    gap: 16,
   },
   rsvpBtn: {
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 10,
     borderWidth: 1.5,
-    borderColor: Blue.border,
-    minWidth: 80,
+    borderColor: 'rgba(255,255,255,0.6)',
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    minWidth: 100,
     alignItems: 'center',
   },
   rsvpBtnActive: {
-    backgroundColor: Blue.primary,
-    // borderColor: Blue.primary,
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    borderColor: 'rgba(255,255,255,0.8)',
   },
   rsvpBtnDisabled: {
     opacity: 0.6,
@@ -281,7 +272,17 @@ const styles = StyleSheet.create({
     color: Blue.text,
   },
   rsvpBtnTextActive: {
-    color: '#fff',
+    color: Blue.primary,
+  },
+  perksList: {
+    flexDirection: 'column',
+    gap: 2,
+    alignItems: 'flex-end',
+  },
+  perkText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.95)',
   },
   centered: {
     flex: 1,

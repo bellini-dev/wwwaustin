@@ -1,12 +1,16 @@
+import { Buffer } from 'buffer';
 import { API_BASE_URL } from '@/constants/api';
 
 export type Event = {
   id: string;
   what: string;
   where: string;
+  when?: string | null;
   datetime: string;
   free_food?: boolean;
   free_drinks?: boolean;
+  free_entry?: boolean;
+  event_link?: string | null;
   created_at: string;
   updated_at: string;
   rsvps?: { user_id: string; name: string | null; status: 'interested' }[];
@@ -50,4 +54,20 @@ export async function rsvpEvent(eventId: string, token: string): Promise<unknown
 
 export async function removeRsvp(eventId: string, token: string): Promise<void> {
   await api(`/events/${eventId}/rsvp`, { method: 'DELETE', token });
+}
+
+/** Fetch a user's avatar and return as data URI, or null if none / error. */
+export async function getAvatarDataUri(userId: string, token: string): Promise<string | null> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/auth/users/${userId}/avatar`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return null;
+    const arrayBuffer = await res.arrayBuffer();
+    const contentType = res.headers.get('Content-Type') || 'image/jpeg';
+    const base64 = Buffer.from(arrayBuffer).toString('base64');
+    return `data:${contentType};base64,${base64}`;
+  } catch {
+    return null;
+  }
 }

@@ -16,6 +16,7 @@ import {
 import MapView, { Marker } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MapErrorBoundary } from '@/components/map-error-boundary';
+import { InterestedAvatars } from '@/components/interested-avatars';
 import { useAuth } from '@/context/auth-context';
 import { Blue } from '@/constants/theme';
 import type { Event } from '@/lib/api';
@@ -183,8 +184,6 @@ export default function EventDetailScreen() {
     );
   }
 
-  const interestedCount = event.rsvps?.filter((r) => r.status === 'interested').length ?? 0;
-
   return (
     <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
       <View style={styles.header}>
@@ -208,7 +207,15 @@ export default function EventDetailScreen() {
         >
           <View style={styles.detailCard}>
             <Text style={styles.label}>When</Text>
-            <Text style={styles.value}>{formatDate(event.datetime)}</Text>
+            <Text style={styles.value}>
+              {event.when?.trim() ? event.when.trim() : formatDate(event.datetime)}
+            </Text>
+            {event.when?.trim() ? (
+              <>
+                <Text style={[styles.label, styles.labelSpaced]}>Date & time</Text>
+                <Text style={styles.value}>{formatDate(event.datetime)}</Text>
+              </>
+            ) : null}
 
             <Text style={[styles.label, styles.labelSpaced]}>Where</Text>
             <Text style={styles.value}>{event.where}</Text>
@@ -216,38 +223,40 @@ export default function EventDetailScreen() {
             <Text style={[styles.label, styles.labelSpaced]}>What</Text>
             <Text style={styles.value}>{event.what}</Text>
 
-            {/* <View style={styles.counts}>
-              <Text style={styles.countText}>Interested: {interestedCount}</Text>
-            </View> */}
+            {event.event_link ? (
+              <>
+                <Text style={[styles.label, styles.labelSpaced]}>Event link</Text>
+                <Pressable onPress={() => event.event_link && RNLinking.openURL(event.event_link)}>
+                  <Text style={styles.eventLink}>{event.event_link}</Text>
+                </Pressable>
+              </>
+            ) : null}
 
             <View style={styles.rsvpRow}>
               {user && token ? (
-                <View style={styles.rsvpButtons}>
-                  <Pressable
-                    style={[
-                      styles.rsvpBtn,
-                      myRsvp?.status === 'interested' && styles.rsvpBtnActive,
-                      rsvpLoading && styles.rsvpBtnDisabled,
-                    ]}
-                    onPress={() => (myRsvp?.status === 'interested' ? clearRsvp() : setInterested())}
-                    disabled={rsvpLoading}
-                  >
-                    <Text style={[styles.rsvpBtnText, myRsvp?.status === 'interested' && styles.rsvpBtnTextActive]}>
-                      {myRsvp?.status === 'interested' ? "I'm Interested" : 'Interested'}
-                      {interestedCount > 0 ? ` ${interestedCount}` : ''}
-                    </Text>
-                  </Pressable>
-                </View>
+                <Pressable
+                  style={[
+                    styles.rsvpBtn,
+                    myRsvp?.status === 'interested' && styles.rsvpBtnActive,
+                    rsvpLoading && styles.rsvpBtnDisabled,
+                  ]}
+                  onPress={() => (myRsvp?.status === 'interested' ? clearRsvp() : setInterested())}
+                  disabled={rsvpLoading}
+                >
+                  <Text style={[styles.rsvpBtnText, myRsvp?.status === 'interested' && styles.rsvpBtnTextActive]}>
+                    {myRsvp?.status === 'interested' ? "I'm Interested" : 'Interested'}
+                  </Text>
+                </Pressable>
               ) : (
-                <View style={styles.rsvpButtons} />
+                <View style={styles.rsvpBtnPlaceholder} />
               )}
-              {(event.free_food || event.free_drinks) && (
-                <View style={styles.perks}>
-                  {event.free_food && <Text style={styles.perkEmoji}>🍕</Text>}
-                  {event.free_drinks && <Text style={styles.perkEmoji}>🍺</Text>}
-                </View>
-              )}
+              <View style={styles.perksList}>
+                {event.free_food && <Text style={styles.perkText}>Free Food!</Text>}
+                {event.free_drinks && <Text style={styles.perkText}>Free Drinks!</Text>}
+                {event.free_entry && <Text style={styles.perkText}>Free Entry!</Text>}
+              </View>
             </View>
+            <InterestedAvatars rsvps={event.rsvps ?? []} token={token ?? null} />
           </View>
         </ScrollView>
       </View>
@@ -325,11 +334,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Blue.border,
     backgroundColor: Blue.surface,
+    color: Blue.primary,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: '600',
-    color: Blue.text,
+    color: Blue.primary,
   },
   headerActions: {
     flexDirection: 'row',
@@ -393,6 +403,12 @@ const styles = StyleSheet.create({
     color: '#fff',
     lineHeight: 22,
   },
+  eventLink: {
+    fontSize: 16,
+    color: '#fff',
+    textDecorationLine: 'underline',
+    lineHeight: 22,
+  },
   counts: {
     flexDirection: 'row',
     gap: 16,
@@ -407,20 +423,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: 16,
     marginTop: 20,
   },
-  rsvpButtons: {
-    flexDirection: 'row',
-    gap: 12,
+  rsvpBtnPlaceholder: {
+    minWidth: 100,
   },
-  perks: {
-    flexDirection: 'row',
-    gap: 6,
-    alignItems: 'center',
+  perksList: {
+    flexDirection: 'column',
+    gap: 2,
+    alignItems: 'flex-end',
   },
-  perkEmoji: {
-    fontSize: 22,
+  perkText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.95)',
   },
   rsvpBtn: {
     paddingVertical: 10,

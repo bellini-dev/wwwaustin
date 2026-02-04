@@ -1,4 +1,3 @@
-import { Buffer } from 'buffer';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import { useCallback, useEffect, useState } from 'react';
@@ -17,7 +16,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/context/auth-context';
-import { API_BASE_URL } from '@/constants/api';
+import { getAvatarDataUri } from '@/lib/api';
 import { Blue } from '@/constants/theme';
 
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024; // 2 MB
@@ -37,26 +36,17 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(false);
 
   const loadAvatar = useCallback(async () => {
-    if (!token) return;
+    if (!token || !user?.id) return;
     setAvatarLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/auth/me/avatar`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) {
-        setAvatarUri(null);
-        return;
-      }
-      const arrayBuffer = await res.arrayBuffer();
-      const contentType = res.headers.get('Content-Type') || 'image/jpeg';
-      const base64 = Buffer.from(arrayBuffer).toString('base64');
-      setAvatarUri(`data:${contentType};base64,${base64}`);
+      const uri = await getAvatarDataUri(user.id, token);
+      setAvatarUri(uri);
     } catch {
       setAvatarUri(null);
     } finally {
       setAvatarLoading(false);
     }
-  }, [token]);
+  }, [token, user?.id]);
 
   useEffect(() => {
     if (user && token) loadAvatar();

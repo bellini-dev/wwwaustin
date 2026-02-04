@@ -14,7 +14,7 @@ router.get('/', async (req, res, next) => {
   try {
     const { from, to } = req.query;
     let query = `
-      SELECT e.id, e.what, e."where", e.datetime, e.free_food, e.free_drinks, e.created_at, e.updated_at,
+      SELECT e.id, e.what, e."where", e."when", e.datetime, e.free_food, e.free_drinks, e.free_entry, e.event_link, e.created_at, e.updated_at,
              (SELECT json_agg(json_build_object('user_id', u.id, 'name', u.name, 'status', r.status))
               FROM rsvps r JOIN users u ON r.user_id = u.id WHERE r.event_id = e.id) AS rsvps
       FROM events e
@@ -38,9 +38,12 @@ router.get('/', async (req, res, next) => {
       id: row.id,
       what: row.what,
       where: row.where,
+      when: row.when ?? null,
       datetime: row.datetime,
       free_food: row.free_food ?? false,
       free_drinks: row.free_drinks ?? false,
+      free_entry: row.free_entry ?? false,
+      event_link: row.event_link ?? null,
       created_at: row.created_at,
       updated_at: row.updated_at,
       rsvps: row.rsvps?.filter(Boolean) || [],
@@ -58,7 +61,7 @@ router.get('/:id', param('id').isUUID(), async (req, res, next) => {
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
     const { id } = req.params;
     const result = await pool.query(
-      `SELECT e.id, e.what, e."where", e.datetime, e.free_food, e.free_drinks, e.created_at, e.updated_at,
+      `SELECT e.id, e.what, e."where", e."when", e.datetime, e.free_food, e.free_drinks, e.free_entry, e.event_link, e.created_at, e.updated_at,
               (SELECT json_agg(json_build_object('user_id', u.id, 'name', u.name, 'status', r.status))
                FROM rsvps r JOIN users u ON r.user_id = u.id WHERE r.event_id = e.id) AS rsvps
        FROM events e WHERE e.id = $1`,
@@ -72,9 +75,12 @@ router.get('/:id', param('id').isUUID(), async (req, res, next) => {
       id: row.id,
       what: row.what,
       where: row.where,
+      when: row.when ?? null,
       datetime: row.datetime,
       free_food: row.free_food ?? false,
       free_drinks: row.free_drinks ?? false,
+      free_entry: row.free_entry ?? false,
+      event_link: row.event_link ?? null,
       created_at: row.created_at,
       updated_at: row.updated_at,
       rsvps: row.rsvps?.filter(Boolean) || [],

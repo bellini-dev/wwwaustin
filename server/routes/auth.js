@@ -1,7 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { body, validationResult } = require('express-validator');
+const { body, param, validationResult } = require('express-validator');
 const { pool } = require('../config/db');
 const { auth } = require('../middleware/auth');
 
@@ -186,6 +186,27 @@ router.put(
 router.get('/me/avatar', auth, async (req, res, next) => {
   try {
     const userId = req.user.id;
+    const result = await pool.query(
+      'SELECT data, content_type FROM profile_pics WHERE user_id = $1',
+      [userId]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).end();
+    }
+    const row = result.rows[0];
+    res.set('Content-Type', row.content_type || 'image/jpeg');
+    res.send(row.data);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /auth/users/:id/avatar – get another user's profile picture (auth required)
+router.get('/users/:id/avatar', auth, param('id').isUUID(), async (req, res, next) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+    const userId = req.params.id;
     const result = await pool.query(
       'SELECT data, content_type FROM profile_pics WHERE user_id = $1',
       [userId]

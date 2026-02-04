@@ -120,9 +120,12 @@ export default function CreateEventPage() {
   const [city, setCity] = useState('');
   const [state, setState] = useState('');
   const [zip, setZip] = useState('');
+  const [whenText, setWhenText] = useState('');
   const [datetime, setDatetime] = useState('');
   const [freeFood, setFreeFood] = useState(false);
   const [freeDrinks, setFreeDrinks] = useState(false);
+  const [freeEntry, setFreeEntry] = useState(false);
+  const [eventLink, setEventLink] = useState('');
   const [mapCenter, setMapCenter] = useState(null);
   const [marker, setMarker] = useState(null);
   const [error, setError] = useState('');
@@ -175,6 +178,9 @@ export default function CreateEventPage() {
         datetime: new Date(datetime).toISOString(),
         free_food: freeFood,
         free_drinks: freeDrinks,
+        free_entry: freeEntry,
+        event_link: eventLink.trim() || undefined,
+        when: whenText.trim() || undefined,
       });
       setSuccess('Event created.');
       setWhat('');
@@ -184,9 +190,12 @@ export default function CreateEventPage() {
       setCity('');
       setState('');
       setZip('');
+      setWhenText('');
       setDatetime('');
       setFreeFood(false);
       setFreeDrinks(false);
+      setFreeEntry(false);
+      setEventLink('');
       setMapCenter(null);
       setMarker(null);
     } catch (err) {
@@ -295,6 +304,15 @@ export default function CreateEventPage() {
             </MapContainer>
           </div>
 
+          <label style={styles.label}>When (optional)</label>
+          <input
+            type="text"
+            placeholder="e.g. Feb 1–3, or a pun, or leave blank to use date & time"
+            value={whenText}
+            onChange={(e) => setWhenText(e.target.value)}
+            style={styles.input}
+          />
+
           <label style={styles.label}>Date & time</label>
           <input
             type="datetime-local"
@@ -304,14 +322,27 @@ export default function CreateEventPage() {
             required
           />
 
+          <label style={styles.label}>Event link (optional)</label>
+          <input
+            type="url"
+            placeholder="https://..."
+            value={eventLink}
+            onChange={(e) => setEventLink(e.target.value)}
+            style={styles.input}
+          />
+
           <div style={styles.checkboxRow}>
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
               <input type="checkbox" checked={freeFood} onChange={(e) => setFreeFood(e.target.checked)} style={styles.checkbox} />
-              🍕 Free food
+              Free food
             </label>
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
               <input type="checkbox" checked={freeDrinks} onChange={(e) => setFreeDrinks(e.target.checked)} style={styles.checkbox} />
-              🍺 Free drinks
+              Free drinks
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+              <input type="checkbox" checked={freeEntry} onChange={(e) => setFreeEntry(e.target.checked)} style={styles.checkbox} />
+              Free entry
             </label>
           </div>
 

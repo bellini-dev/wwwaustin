@@ -56,6 +56,63 @@ export async function deleteEvent(token, eventId) {
   throw new Error(data.error || 'Failed to delete event');
 }
 
+// User management (for testing)
+export async function getAdminUsers(token) {
+  const res = await fetch(`${API_URL}/admin/users`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to load users');
+  return data;
+}
+
+export async function getAdminUser(token, userId) {
+  const res = await fetch(`${API_URL}/admin/users/${userId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to load user');
+  return data;
+}
+
+export async function updateAdminUser(token, userId, { email, name }) {
+  const res = await fetch(`${API_URL}/admin/users/${userId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ email, name }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || data.errors?.[0]?.msg || 'Failed to update user');
+  return data;
+}
+
+export async function updateAdminUserAvatar(token, userId, { image, content_type }) {
+  const res = await fetch(`${API_URL}/admin/users/${userId}/avatar`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ image, content_type: content_type || 'image/jpeg' }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to update avatar');
+  return data;
+}
+
+/** Returns blob for the user's avatar, or null if 404. Caller should revoke object URL when done. */
+export async function getAdminUserAvatarBlob(token, userId) {
+  const res = await fetch(`${API_URL}/admin/users/${userId}/avatar`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error('Failed to load avatar');
+  return res.blob();
+}
+
 const DEBUG_GEOCODE = import.meta.env.DEV;
 
 export async function geocodeAddress(address) {

@@ -3,6 +3,8 @@ import { useAuth } from './context/AuthContext';
 import Login from './pages/Login';
 import CreateEvent from './pages/CreateEvent';
 import EventList from './pages/EventList';
+import Users from './pages/Users';
+import EditUser from './pages/EditUser';
 
 function ProtectedRoute({ children }) {
   const { token, loading } = useAuth();
@@ -42,6 +44,22 @@ export default function App() {
         element={
           <ProtectedRoute>
             <CreateEvent />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/users"
+        element={
+          <ProtectedRoute>
+            <Users />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/users/:id/edit"
+        element={
+          <ProtectedRoute>
+            <EditUser />
           </ProtectedRoute>
         }
       />

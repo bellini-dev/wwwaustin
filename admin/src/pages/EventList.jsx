@@ -145,7 +145,10 @@ export default function EventListPage() {
       <header style={styles.header}>
         <h1 style={styles.title}>Events</h1>
         <div>
-          <Link to="/create" style={styles.link}>
+          <Link to="/users" style={styles.link}>
+            Users
+          </Link>
+          <Link to="/create" style={{ ...styles.link, marginLeft: 16 }}>
             Create event
           </Link>
           <button type="button" style={styles.logout} onClick={logout}>
