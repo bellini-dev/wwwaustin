@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   Linking as RNLinking,
   Platform,
   Pressable,
@@ -13,6 +14,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import MapView, { Marker } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MapErrorBoundary } from '@/components/map-error-boundary';
@@ -184,8 +186,12 @@ export default function EventDetailScreen() {
     );
   }
 
+  const interestedCount = event.rsvps?.filter((r) => r.status === 'interested').length ?? 0;
+  const whatText = event.description?.trim() || event.what;
+
   return (
-    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      {/* Header: white, Event details | Share, Close (blue) */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Event details</Text>
         <View style={styles.headerActions} pointerEvents="box-none">
@@ -198,118 +204,134 @@ export default function EventDetailScreen() {
         </View>
       </View>
 
-      {/* Top half: details */}
-      <View style={styles.detailsHalf}>
-        <ScrollView
-          style={styles.detailsScroll}
-          contentContainerStyle={styles.detailsScrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.detailCard}>
-            <Text style={styles.label}>When</Text>
-            <Text style={styles.value}>
-              {event.when?.trim() ? event.when.trim() : formatDate(event.datetime)}
-            </Text>
-            {event.when?.trim() ? (
-              <>
-                <Text style={[styles.label, styles.labelSpaced]}>Date & time</Text>
-                <Text style={styles.value}>{formatDate(event.datetime)}</Text>
-              </>
-            ) : null}
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 24 + 56 + insets.bottom }]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Event image with category pill */}
+        <View style={styles.imageWrap}>
+          <Image
+            source={
+              event.image_url
+                ? { uri: event.image_url }
+                : require('@/assets/images/austin_skyline.jpg')
+            }
+            style={styles.heroImage}
+            resizeMode="cover"
+          />
+          <View style={styles.categoryPill}>
+            <Text style={styles.categoryPillText}>Category</Text>
+          </View>
+        </View>
 
-            <Text style={[styles.label, styles.labelSpaced]}>Where</Text>
-            <Text style={styles.value}>{event.where}</Text>
+        {/* Blue block: WHEN, WHERE, WHAT */}
+        <View style={styles.blueBlock}>
+          <Text style={styles.blockLabel}>WHEN</Text>
+          <Text style={styles.blockValue}>
+            {event.when?.trim() ? event.when.trim() : formatDate(event.datetime)}
+          </Text>
 
-            <Text style={[styles.label, styles.labelSpaced]}>What</Text>
-            <Text style={styles.value}>{event.what}</Text>
+          <Text style={[styles.blockLabel, styles.blockLabelSpaced]}>WHERE</Text>
+          <Text style={styles.blockValue}>{event.where}</Text>
 
-            {event.event_link ? (
-              <>
-                <Text style={[styles.label, styles.labelSpaced]}>Event link</Text>
-                <Pressable onPress={() => event.event_link && RNLinking.openURL(event.event_link)}>
-                  <Text style={styles.eventLink}>{event.event_link}</Text>
-                </Pressable>
-              </>
-            ) : null}
+          <Text style={[styles.blockLabel, styles.blockLabelSpaced]}>WHAT</Text>
+          <Text style={styles.blockValue}>{whatText}</Text>
 
-            <View style={styles.rsvpRow}>
-              {user && token ? (
-                <Pressable
-                  style={[
-                    styles.rsvpBtn,
-                    myRsvp?.status === 'interested' && styles.rsvpBtnActive,
-                    rsvpLoading && styles.rsvpBtnDisabled,
-                  ]}
-                  onPress={() => (myRsvp?.status === 'interested' ? clearRsvp() : setInterested())}
-                  disabled={rsvpLoading}
-                >
-                  <Text style={[styles.rsvpBtnText, myRsvp?.status === 'interested' && styles.rsvpBtnTextActive]}>
-                    {myRsvp?.status === 'interested' ? "I'm Interested" : 'Interested'}
-                  </Text>
-                </Pressable>
-              ) : (
-                <View style={styles.rsvpBtnPlaceholder} />
-              )}
-              <View style={styles.perksList}>
-                {event.free_food && <Text style={styles.perkText}>Free Food!</Text>}
-                {event.free_drinks && <Text style={styles.perkText}>Free Drinks!</Text>}
-                {event.free_entry && <Text style={styles.perkText}>Free Entry!</Text>}
-              </View>
-            </View>
+          {event.event_link ? (
+            <>
+              <Text style={[styles.blockLabel, styles.blockLabelSpaced]}>Event link</Text>
+              <Pressable onPress={() => event.event_link && RNLinking.openURL(event.event_link)}>
+                <Text style={styles.eventLink}>{event.event_link}</Text>
+              </Pressable>
+            </>
+          ) : null}
+        </View>
+
+        {/* Separator + interested row */}
+        <View style={styles.separator} />
+        <View style={styles.interestedRow}>
+          <View style={styles.interestedAvatarsWrap}>
             <InterestedAvatars rsvps={event.rsvps ?? []} token={token ?? null} />
           </View>
-        </ScrollView>
-      </View>
+          <Text style={styles.interestedCount}>{interestedCount.toLocaleString()} interested</Text>
+        </View>
 
-      {/* Bottom half: map (shows loading until region is ready). Skip MapView on iOS Simulator to avoid GeoServices "default.csv" error. */}
-      <View style={styles.mapHalf}>
-        {Platform.OS !== 'web' && !!region ? (
-          <MapErrorBoundary
-            fallback={
-              <Pressable style={styles.mapPlaceholder} onPress={openNavigation}>
-                <Text style={styles.mapIcon}>📍</Text>
-                <Text style={styles.mapTitle}>Open in Maps</Text>
-                <Text style={styles.mapSubtitle}>Tap to open navigation to {event.where}</Text>
-              </Pressable>
-            }
-          >
-            <View style={styles.mapWrapper}>
-              <MapView
-                style={styles.map}
-                region={{
-                  latitude: region.latitude,
-                  longitude: region.longitude,
-                  latitudeDelta: region.latitudeDelta,
-                  longitudeDelta: region.longitudeDelta,
-                }}
-                scrollEnabled
-                zoomEnabled
-                mapType="standard"
-              >
-                {hasRealCoords && (
-                  <Marker
-                    coordinate={{ latitude: region.latitude, longitude: region.longitude }}
-                    title={event.where}
-                  />
-                )}
-              </MapView>
-              <Pressable style={styles.mapOverlay} onPress={openNavigation}>
-                <Text style={styles.mapOverlayText}>Tap to open navigation</Text>
-              </Pressable>
+        {/* Map section */}
+        <View style={styles.mapSection}>
+          {Platform.OS !== 'web' && !!region ? (
+            <MapErrorBoundary
+              fallback={
+                <Pressable style={styles.mapPlaceholder} onPress={openNavigation}>
+                  <Ionicons name="location" size={32} color={Blue.primary} />
+                  <Text style={styles.mapPlaceholderText}>Tap to open in Maps</Text>
+                </Pressable>
+              }
+            >
+              <View style={styles.mapWrapper}>
+                <MapView
+                  style={styles.map}
+                  region={{
+                    latitude: region.latitude,
+                    longitude: region.longitude,
+                    latitudeDelta: region.latitudeDelta,
+                    longitudeDelta: region.longitudeDelta,
+                  }}
+                  scrollEnabled={false}
+                  zoomEnabled={false}
+                  mapType="standard"
+                >
+                  {hasRealCoords && (
+                    <Marker
+                      coordinate={{ latitude: region.latitude, longitude: region.longitude }}
+                      title={event.where}
+                    />
+                  )}
+                </MapView>
+              </View>
+            </MapErrorBoundary>
+          ) : region === null && event.where ? (
+            <View style={styles.mapLoading}>
+              <ActivityIndicator size="small" color={Blue.primary} />
+              <Text style={styles.mapLoadingText}>Loading map…</Text>
             </View>
-          </MapErrorBoundary>
-        ) : region === null && event.where ? (
-          <View style={styles.mapLoading}>
-            <ActivityIndicator size="large" color={Blue.primary} />
-            <Text style={styles.mapLoadingText}>Loading map…</Text>
-          </View>
-        ) : (
-          <Pressable style={styles.mapPlaceholder} onPress={openNavigation}>
-            <Text style={styles.mapIcon}>📍</Text>
-            <Text style={styles.mapTitle}>Open in Maps</Text>
-            <Text style={styles.mapSubtitle}>Tap to open navigation to {event.where}</Text>
+          ) : (
+            <Pressable style={styles.mapPlaceholder} onPress={openNavigation}>
+              <Ionicons name="location" size={32} color={Blue.primary} />
+              <Text style={styles.mapPlaceholderText}>Tap to open in Maps</Text>
+            </Pressable>
+          )}
+
+          {/* Location row: venue + get directions */}
+          <Pressable style={styles.locationRow} onPress={openNavigation}>
+            <Ionicons name="location-outline" size={20} color={Blue.text} />
+            <View style={styles.locationTextWrap}>
+              <Text style={styles.locationName}>{event.where}</Text>
+              <Text style={styles.locationHint}>Tap for directions</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={Blue.primary} />
           </Pressable>
-        )}
+        </View>
+      </ScrollView>
+
+      {/* Fixed bottom: I'm Interested button */}
+      <View style={[styles.fixedBottom, { paddingBottom: 16 + insets.bottom }]}>
+        {user && token ? (
+          <Pressable
+            style={[styles.interestedBtn, rsvpLoading && styles.interestedBtnDisabled]}
+            onPress={() => (myRsvp?.status === 'interested' ? clearRsvp() : setInterested())}
+            disabled={rsvpLoading}
+          >
+            <Ionicons
+              name={myRsvp?.status === 'interested' ? 'star' : 'star-outline'}
+              size={22}
+              color="#fff"
+            />
+            <Text style={styles.interestedBtnText}>
+              {myRsvp?.status === 'interested' ? "I'm Interested" : "I'm Interested"}
+            </Text>
+          </Pressable>
+        ) : null}
       </View>
     </View>
   );
@@ -318,7 +340,7 @@ export default function EventDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Blue.background,
+    backgroundColor: '#fff',
   },
   centered: {
     justifyContent: 'center',
@@ -329,22 +351,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
     borderBottomWidth: 1,
     borderBottomColor: Blue.border,
-    backgroundColor: Blue.surface,
-    color: Blue.primary,
+    backgroundColor: '#fff',
   },
   headerTitle: {
-    fontSize: 22,
-    fontWeight: '600',
-    color: Blue.primary,
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#0d1b2a',
   },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 4,
   },
   headerBtn: {
     paddingVertical: 8,
@@ -371,35 +392,53 @@ const styles = StyleSheet.create({
     color: Blue.primary,
     fontWeight: '600',
   },
-  detailsHalf: {
-    flex: 1,
-    minHeight: 0,
-  },
-  detailsScroll: {
+  scroll: {
     flex: 1,
   },
-  detailsScrollContent: {
-    padding: 20,
+  scrollContent: {
     paddingBottom: 24,
   },
-  detailCard: {
-    backgroundColor: Blue.primary,
-    borderRadius: 16,
-    padding: 20,
+  imageWrap: {
+    width: '100%',
+    position: 'relative',
   },
-  label: {
+  heroImage: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    backgroundColor: '#e5e7eb',
+  },
+  categoryPill: {
+    position: 'absolute',
+    top: 12,
+    right: 16,
+    backgroundColor: '#fff',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  categoryPillText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Blue.primary,
+  },
+  blueBlock: {
+    backgroundColor: Blue.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+  },
+  blockLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: 'rgba(255,255,255,0.8)',
-    textTransform: 'uppercase',
+    color: 'rgba(255,255,255,0.85)',
     letterSpacing: 0.5,
     marginBottom: 4,
   },
-  labelSpaced: {
+  blockLabelSpaced: {
     marginTop: 16,
   },
-  value: {
+  blockValue: {
     fontSize: 16,
+    fontWeight: '600',
     color: '#fff',
     lineHeight: 22,
   },
@@ -409,121 +448,116 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline',
     lineHeight: 22,
   },
-  counts: {
-    flexDirection: 'row',
-    gap: 16,
-    marginTop: 16,
+  separator: {
+    height: 1,
+    backgroundColor: '#e5e7eb',
+    marginVertical: 16,
+    marginHorizontal: 20,
   },
-  countText: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.9)',
-    fontWeight: '500',
-  },
-  rsvpRow: {
+  interestedRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 16,
-    marginTop: 20,
-  },
-  rsvpBtnPlaceholder: {
-    minWidth: 100,
-  },
-  perksList: {
-    flexDirection: 'column',
-    gap: 2,
-    alignItems: 'flex-end',
-  },
-  perkText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: 'rgba(255,255,255,0.95)',
-  },
-  rsvpBtn: {
-    paddingVertical: 10,
     paddingHorizontal: 20,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.8)',
-    minWidth: 80,
-    alignItems: 'center',
+    paddingBottom: 8,
   },
-  rsvpBtnActive: {
-    backgroundColor: '#fff',
-    borderColor: '#fff',
-  },
-  rsvpBtnDisabled: {
-    opacity: 0.6,
-  },
-  rsvpBtnText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#fff',
-  },
-  rsvpBtnTextActive: {
-    color: Blue.primary,
-  },
-  mapHalf: {
+  interestedAvatarsWrap: {
     flex: 1,
-    minHeight: 0,
-    backgroundColor: Blue.surface,
-    overflow: 'hidden',
+    marginRight: 12,
   },
-  mapLoading: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 12,
-  },
-  mapLoadingText: {
-    fontSize: 16,
+  interestedCount: {
+    fontSize: 14,
     color: Blue.textSecondary,
     fontWeight: '500',
   },
+  mapSection: {
+    marginHorizontal: 20,
+    marginTop: 8,
+    borderRadius: 12,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: Blue.border,
+  },
   mapWrapper: {
-    flex: 1,
     width: '100%',
-    minHeight: 0,
+    height: 200,
   },
   map: {
     width: '100%',
     height: '100%',
   },
-  mapOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    alignItems: 'center',
-  },
-  mapOverlayText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
   mapPlaceholder: {
-    flex: 1,
-    padding: 24,
+    height: 200,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#f3f4f6',
+    gap: 8,
   },
-  mapIcon: {
-    fontSize: 40,
-    marginBottom: 8,
-  },
-  mapTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: Blue.primary,
-    marginBottom: 4,
-  },
-  mapSubtitle: {
+  mapPlaceholderText: {
     fontSize: 14,
     color: Blue.textSecondary,
-    textAlign: 'center',
+    fontWeight: '500',
+  },
+  mapLoading: {
+    height: 200,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f3f4f6',
+    gap: 8,
+  },
+  mapLoadingText: {
+    fontSize: 14,
+    color: Blue.textSecondary,
+    fontWeight: '500',
+  },
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: '#fff',
+    gap: 12,
+  },
+  locationTextWrap: {
+    flex: 1,
+  },
+  locationName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Blue.text,
+  },
+  locationHint: {
+    fontSize: 13,
+    color: Blue.textSecondary,
+    marginTop: 2,
+  },
+  fixedBottom: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: Blue.border,
+  },
+  interestedBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Blue.primary,
+    paddingVertical: 14,
+    borderRadius: 12,
+    gap: 8,
+  },
+  interestedBtnDisabled: {
+    opacity: 0.6,
+  },
+  interestedBtnText: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#fff',
   },
   error: {
     fontSize: 16,
