@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const { body, param, validationResult } = require('express-validator');
 const { pool } = require('../config/db');
 const { adminAuth } = require('../middleware/adminAuth');
+const { uploadEventImage } = require('../config/cloudinary');
 
 const router = express.Router();
 
@@ -54,6 +55,26 @@ router.get('/me', adminAuth, (req, res) => {
   res.json({ admin: req.admin });
 });
 
+// POST /admin/upload/event-image – upload image to Cloudinary, return URL (admin only)
+// Body: { image: base64 string, content_type?: 'image/jpeg' | 'image/png' }
+router.post(
+  '/upload/event-image',
+  express.json({ limit: '10mb' }),
+  adminAuth,
+  body('image').notEmpty().withMessage('image (base64) is required'),
+  async (req, res, next) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+      const contentType = req.body.content_type === 'image/png' ? 'image/png' : 'image/jpeg';
+      const { url } = await uploadEventImage(req.body.image, contentType);
+      res.json({ url });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
 // GET /admin/events – list events with interested count (admin only)
 router.get('/events', adminAuth, async (req, res, next) => {
   try {
@@ -85,6 +106,44 @@ router.get('/events', adminAuth, async (req, res, next) => {
       };
     });
     res.json(events);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /admin/events/:id – get one event (admin only)
+router.get('/events/:id', adminAuth, param('id').isUUID(), async (req, res, next) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+    const result = await pool.query(
+      `SELECT e.id, e.what, e."where", e."when", e.datetime, e.free_food, e.free_drinks, e.free_entry, e.event_link, e.image_url, e.description, e.created_at, e.updated_at,
+              (SELECT json_agg(json_build_object('user_id', u.id, 'name', u.name, 'status', r.status))
+               FROM rsvps r JOIN users u ON r.user_id = u.id WHERE r.event_id = e.id) AS rsvps
+       FROM events e WHERE e.id = $1`,
+      [req.params.id]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Event not found' });
+    const row = result.rows[0];
+    const rsvps = row.rsvps?.filter(Boolean) || [];
+    const interestedCount = rsvps.filter((r) => r.status === 'interested').length;
+    res.json({
+      id: row.id,
+      what: row.what,
+      where: row.where,
+      when: row.when ?? null,
+      datetime: row.datetime,
+      free_food: row.free_food ?? false,
+      free_drinks: row.free_drinks ?? false,
+      free_entry: row.free_entry ?? false,
+      event_link: row.event_link ?? null,
+      image_url: row.image_url ?? null,
+      description: row.description ?? null,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+      rsvps,
+      interestedCount,
+    });
   } catch (err) {
     next(err);
   }

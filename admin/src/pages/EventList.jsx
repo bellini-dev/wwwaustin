@@ -183,6 +183,9 @@ export default function EventListPage() {
                   <td style={styles.td}>{formatDate(event.datetime)}</td>
                   <td style={styles.td}>{event.interestedCount ?? 0}</td>
                   <td style={styles.td}>
+                    <Link to={`/events/${event.id}/edit`} style={{ ...styles.link, marginRight: 12 }}>
+                      Edit
+                    </Link>
                     <button
                       type="button"
                       style={{

@@ -75,15 +75,17 @@ function EventCard({
   return (
     <View style={styles.card}>
       <Pressable onPress={onPressDetails} style={styles.cardPressable}>
-        <Image
-          source={
-            event.image_url
-              ? { uri: event.image_url }
-              : require('@/assets/images/austin_skyline.jpg')
-          }
-          style={styles.cardImage}
-          resizeMode="cover"
-        />
+        <View style={styles.cardImageWrap}>
+          <Image
+            source={
+              event.image_url
+                ? { uri: event.image_url }
+                : require('@/assets/images/austin_skyline.jpg')
+            }
+            style={styles.cardImage}
+            resizeMode="cover"
+          />
+        </View>
         <Text style={styles.cardDescription} numberOfLines={6}>
           {descriptionText}
         </Text>
@@ -292,10 +294,15 @@ const styles = StyleSheet.create({
   cardPressable: {
     flex: 1,
   },
+  cardImageWrap: {
+    width: '100%',
+    height: 400,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(0,0,0,0.2)',
+  },
   cardImage: {
     width: '100%',
-    aspectRatio: 16 / 9,
-    backgroundColor: 'rgba(0,0,0,0.2)',
+    height: '100%',
   },
   cardDescription: {
     fontSize: 15,

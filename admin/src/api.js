@@ -32,6 +32,15 @@ export async function getAdminEvents(token) {
   return data;
 }
 
+export async function getAdminEvent(token, eventId) {
+  const res = await fetch(`${API_URL}/admin/events/${eventId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to load event');
+  return data;
+}
+
 export async function createEvent(token, event) {
   const res = await fetch(`${API_URL}/admin/events`, {
     method: 'POST',
@@ -46,6 +55,20 @@ export async function createEvent(token, event) {
   return data;
 }
 
+export async function updateEvent(token, eventId, event) {
+  const res = await fetch(`${API_URL}/admin/events/${eventId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(event),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || data.errors?.[0]?.msg || 'Failed to update event');
+  return data;
+}
+
 export async function deleteEvent(token, eventId) {
   const res = await fetch(`${API_URL}/admin/events/${eventId}`, {
     method: 'DELETE',
@@ -54,6 +77,21 @@ export async function deleteEvent(token, eventId) {
   if (res.status === 204) return;
   const data = await res.json().catch(() => ({}));
   throw new Error(data.error || 'Failed to delete event');
+}
+
+/** Upload event image to Cloudinary; returns { url }. */
+export async function uploadEventImage(token, imageBase64, contentType = 'image/jpeg') {
+  const res = await fetch(`${API_URL}/admin/upload/event-image`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ image: imageBase64, content_type: contentType }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to upload image');
+  return data;
 }
 
 // User management (for testing)

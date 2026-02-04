@@ -3,6 +3,7 @@ import { API_BASE_URL } from '@/constants/api';
 
 export type Event = {
   id: string;
+  category?: string | null;
   what: string;
   where: string;
   when?: string | null;

@@ -5,6 +5,7 @@ import CreateEvent from './pages/CreateEvent';
 import EventList from './pages/EventList';
 import Users from './pages/Users';
 import EditUser from './pages/EditUser';
+import EditEvent from './pages/EditEvent';
 
 function ProtectedRoute({ children }) {
   const { token, loading } = useAuth();
@@ -60,6 +61,14 @@ export default function App() {
         element={
           <ProtectedRoute>
             <EditUser />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/events/:id/edit"
+        element={
+          <ProtectedRoute>
+            <EditEvent />
           </ProtectedRoute>
         }
       />

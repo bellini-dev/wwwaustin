@@ -32,7 +32,7 @@ function getApiBaseUrl(): string {
     }
   }
 
-  return `http://localhost:${API_PORT}`;
+  return `http://192.168.1.4:${API_PORT}`;
 }
 
 export const API_BASE_URL = getApiBaseUrl();
