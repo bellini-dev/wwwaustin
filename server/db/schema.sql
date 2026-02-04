@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS events (
   event_link  TEXT,
   image_url   TEXT,
   description TEXT,
+  category    TEXT,
   created_at  TIMESTAMPTZ DEFAULT NOW(),
   updated_at  TIMESTAMPTZ DEFAULT NOW()
 );
@@ -32,6 +33,7 @@ ALTER TABLE events ADD COLUMN IF NOT EXISTS event_link TEXT;
 ALTER TABLE events ADD COLUMN IF NOT EXISTS "when" TEXT;
 ALTER TABLE events ADD COLUMN IF NOT EXISTS image_url TEXT;
 ALTER TABLE events ADD COLUMN IF NOT EXISTS description TEXT;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS category TEXT;
 
 -- RSVPs: interested per user per event
 CREATE TABLE IF NOT EXISTS rsvps (

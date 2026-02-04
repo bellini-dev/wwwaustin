@@ -220,9 +220,11 @@ export default function EventDetailScreen() {
             style={styles.heroImage}
             resizeMode="cover"
           />
-          <View style={styles.categoryPill}>
-            <Text style={styles.categoryPillText}>Category</Text>
-          </View>
+          {event.category ? (
+            <View style={styles.categoryPill}>
+              <Text style={styles.categoryPillText}>{event.category}</Text>
+            </View>
+          ) : null}
         </View>
 
         {/* Blue block: WHEN, WHERE, WHAT */}
@@ -400,12 +402,14 @@ const styles = StyleSheet.create({
   },
   imageWrap: {
     width: '100%',
+    height: 400,
     position: 'relative',
+    overflow: 'hidden',
+    backgroundColor: '#e5e7eb',
   },
   heroImage: {
     width: '100%',
-    aspectRatio: 16 / 9,
-    backgroundColor: '#e5e7eb',
+    height: '100%',
   },
   categoryPill: {
     position: 'absolute',

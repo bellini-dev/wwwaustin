@@ -1,5 +1,4 @@
 import Constants from 'expo-constants';
-import { Platform } from 'react-native';
 
 const API_PORT = '3001';
 
@@ -15,11 +14,6 @@ function getApiBaseUrl(): string {
   // Production / release build: use Railway host unless EXPO_PUBLIC_API_URL is set
   if (typeof __DEV__ === 'boolean' && !__DEV__) {
     return PROD_API_BASE_URL;
-  }
-
-  // Android emulator: 10.0.2.2 is the host machine's localhost
-  if (Platform.OS === 'android') {
-    return `http://192.168.1.4:${API_PORT}`;
   }
 
   // Use same host as Metro bundler (local network IP when running on device)

@@ -15,7 +15,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/context/auth-context';
 import { Blue } from '@/constants/theme';
 
-const authBg = require('../../assets/images/IMG_2554.png');
+// const authBg = require('../../assets/images/IMG_2554.png');
+const authBg = require('../../assets/images/atx_bridge.jpg');
 
 export default function LoginScreen() {
   const { login } = useAuth();

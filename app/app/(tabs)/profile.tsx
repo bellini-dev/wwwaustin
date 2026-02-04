@@ -15,6 +15,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { useAuth } from '@/context/auth-context';
 import { getAvatarDataUri } from '@/lib/api';
 import { Blue } from '@/constants/theme';
@@ -22,6 +23,7 @@ import { Blue } from '@/constants/theme';
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024; // 2 MB
 
 export default function ProfileScreen() {
+  const router = useRouter();
   const { user, token, logout, updateProfile, uploadAvatar } = useAuth();
   const insets = useSafeAreaInsets();
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
@@ -194,7 +196,8 @@ export default function ProfileScreen() {
 
   const handleLogout = useCallback(async () => {
     await logout();
-  }, [logout]);
+    router.replace('/(auth)/login');
+  }, [logout, router]);
 
   if (!user || !token) {
     return (
