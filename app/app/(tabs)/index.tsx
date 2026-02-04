@@ -29,6 +29,18 @@ function formatDate(iso: string) {
   });
 }
 
+function formatDateHeader(iso: string) {
+  const d = new Date(iso);
+  return d.toLocaleDateString(undefined, {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
 function EventCard({
   event,
   token,
@@ -72,9 +84,16 @@ function EventCard({
   const interestedCount = event.rsvps?.filter((r) => r.status === 'interested').length ?? 0;
   const descriptionText = event.description?.trim() || event.what;
 
+  const dateHeaderText = event.when?.trim()
+    ? event.when.trim()
+    : formatDateHeader(event.datetime);
+
   return (
     <View style={styles.card}>
       <Pressable onPress={onPressDetails} style={styles.cardPressable}>
+        <View style={styles.cardDateBar}>
+          <Text style={styles.cardDateBarText}>{dateHeaderText}</Text>
+        </View>
         <View style={styles.cardImageWrap}>
           <Image
             source={
@@ -86,31 +105,31 @@ function EventCard({
             resizeMode="cover"
           />
         </View>
-        <Text style={styles.cardDescription} numberOfLines={6}>
-          {descriptionText}
-        </Text>
-        <View style={styles.cardFooter}>
-          <View style={styles.cardMeta}>
-            <Text style={styles.cardMetaLine}>{event.where}</Text>
-            <Text style={styles.cardMetaLine}>
-              {event.when?.trim() ? event.when.trim() : formatDate(event.datetime)}
+        <View style={styles.cardDetails}>
+          <View style={styles.cardDetailsTop}>
+            <Text style={styles.cardVenue} numberOfLines={1}>
+              {event.where}
             </Text>
-            <Text style={styles.cardMetaLine}>
-              {interestedCount.toLocaleString()} interested
-            </Text>
+            <Pressable
+              onPress={() => (myRsvp?.status === 'interested' ? clearRsvp() : setInterested())}
+              disabled={loading}
+              style={styles.starBtn}
+              hitSlop={12}
+            >
+              <Ionicons
+                name={myRsvp?.status === 'interested' ? 'star' : 'star-outline'}
+                size={28}
+                color="#fff"
+              />
+            </Pressable>
           </View>
-          <Pressable
-            onPress={() => (myRsvp?.status === 'interested' ? clearRsvp() : setInterested())}
-            disabled={loading}
-            style={styles.starBtn}
-            hitSlop={12}
-          >
-            <Ionicons
-              name={myRsvp?.status === 'interested' ? 'star' : 'star-outline'}
-              size={28}
-              color={myRsvp?.status === 'interested' ? '#fff' : 'rgba(255,255,255,0.8)'}
-            />
-          </Pressable>
+          <Text style={styles.cardDescription} numberOfLines={6}>
+            {descriptionText}
+          </Text>
+          <View style={styles.cardSeparator} />
+          <Text style={styles.cardInterested}>
+            {interestedCount.toLocaleString()} interested
+          </Text>
         </View>
       </Pressable>
     </View>
@@ -290,13 +309,30 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Blue.border,
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
   cardPressable: {
     flex: 1,
   },
+  cardDateBar: {
+    backgroundColor: Blue.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderTopLeftRadius: 15,
+    borderTopRightRadius: 15,
+  },
+  cardDateBarText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#fff',
+  },
   cardImageWrap: {
     width: '100%',
-    height: 400,
+    height: 350,
     overflow: 'hidden',
     backgroundColor: 'rgba(0,0,0,0.2)',
   },
@@ -304,30 +340,41 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
+  cardDetails: {
+    backgroundColor: Blue.primary,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 14,
+    borderBottomLeftRadius: 15,
+    borderBottomRightRadius: 15,
+  },
+  cardDetailsTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  cardVenue: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#fff',
+    flex: 1,
+    marginRight: 8,
+  },
   cardDescription: {
     fontSize: 15,
     color: '#fff',
     lineHeight: 22,
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 8,
+    paddingBottom: 10,
   },
-  cardFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.25)',
+  cardSeparator: {
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    marginBottom: 10,
   },
-  cardMeta: {
-    flex: 1,
-  },
-  cardMetaLine: {
+  cardInterested: {
     fontSize: 13,
     color: 'rgba(255,255,255,0.9)',
-    marginBottom: 2,
   },
   starBtn: {
     padding: 4,
