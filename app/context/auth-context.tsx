@@ -41,7 +41,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = useCallback(
     async (email: string, password: string) => {
-      const res = await fetch(`${API_BASE_URL}/auth/login`, {
+      const loginUrl = `${API_BASE_URL}/auth/login`;
+      console.log('[Auth] login URL:', loginUrl);
+      const res = await fetch(loginUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),

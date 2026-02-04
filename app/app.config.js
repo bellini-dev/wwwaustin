@@ -17,6 +17,7 @@ export default {
         ITSAppUsesNonExemptEncryption: false,
       },
       appleTeamId: '29D4TTNP95',
+      newArchEnabled: true,
     },
     android: {
       adaptiveIcon: {
@@ -60,6 +61,7 @@ export default {
       reactCompiler: true,
     },
     extra: {
+      apiUrl: process.env.EXPO_PUBLIC_API_URL,
       router: {},
       eas: {
         projectId: '323a8331-938d-42af-941b-81eba06c7ae2',

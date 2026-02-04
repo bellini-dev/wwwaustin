@@ -227,6 +227,14 @@ export default function EventDetailScreen() {
           ) : null}
         </View>
 
+        {/* Interested avatars + count */}
+        <View style={styles.interestedRow}>
+          <View style={styles.interestedAvatarsWrap}>
+            <InterestedAvatars rsvps={event.rsvps ?? []} token={token ?? null} />
+          </View>
+          <Text style={styles.interestedCount}>{interestedCount.toLocaleString()} interested</Text>
+        </View>
+
         {/* Blue block: WHEN, WHERE, WHAT */}
         <View style={styles.blueBlock}>
           <Text style={styles.blockLabel}>WHEN</Text>
@@ -248,15 +256,6 @@ export default function EventDetailScreen() {
               </Pressable>
             </>
           ) : null}
-        </View>
-
-        {/* Separator + interested row */}
-        <View style={styles.separator} />
-        <View style={styles.interestedRow}>
-          <View style={styles.interestedAvatarsWrap}>
-            <InterestedAvatars rsvps={event.rsvps ?? []} token={token ?? null} />
-          </View>
-          <Text style={styles.interestedCount}>{interestedCount.toLocaleString()} interested</Text>
         </View>
 
         {/* Map section */}
@@ -452,18 +451,13 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline',
     lineHeight: 22,
   },
-  separator: {
-    height: 1,
-    backgroundColor: '#e5e7eb',
-    marginVertical: 16,
-    marginHorizontal: 20,
-  },
   interestedRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingBottom: 8,
+    paddingVertical: 4,
+    backgroundColor: '#fff',
   },
   interestedAvatarsWrap: {
     flex: 1,
