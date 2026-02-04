@@ -126,6 +126,8 @@ export default function CreateEventPage() {
   const [freeDrinks, setFreeDrinks] = useState(false);
   const [freeEntry, setFreeEntry] = useState(false);
   const [eventLink, setEventLink] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
+  const [description, setDescription] = useState('');
   const [mapCenter, setMapCenter] = useState(null);
   const [marker, setMarker] = useState(null);
   const [error, setError] = useState('');
@@ -181,6 +183,8 @@ export default function CreateEventPage() {
         free_entry: freeEntry,
         event_link: eventLink.trim() || undefined,
         when: whenText.trim() || undefined,
+        image_url: imageUrl.trim() || undefined,
+        description: description.trim() || undefined,
       });
       setSuccess('Event created.');
       setWhat('');
@@ -196,6 +200,8 @@ export default function CreateEventPage() {
       setFreeDrinks(false);
       setFreeEntry(false);
       setEventLink('');
+      setImageUrl('');
+      setDescription('');
       setMapCenter(null);
       setMarker(null);
     } catch (err) {
@@ -329,6 +335,24 @@ export default function CreateEventPage() {
             value={eventLink}
             onChange={(e) => setEventLink(e.target.value)}
             style={styles.input}
+          />
+
+          <label style={styles.label}>Image URL (optional)</label>
+          <input
+            type="url"
+            placeholder="https://..."
+            value={imageUrl}
+            onChange={(e) => setImageUrl(e.target.value)}
+            style={styles.input}
+          />
+
+          <label style={styles.label}>Description (optional)</label>
+          <textarea
+            placeholder="Event description for the feed card"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            style={{ ...styles.input, minHeight: 80 }}
+            rows={4}
           />
 
           <div style={styles.checkboxRow}>

@@ -9,16 +9,17 @@ const rsvpValidation = [
   body('status').isIn(['interested']).withMessage('status must be "interested"'),
 ];
 
-// GET /events – list all events (optional: ?from= & ?to= for date range)
+// GET /events – list events (optional: ?from= & ?to= date range; ?limit= & ?offset= for pagination)
 router.get('/', async (req, res, next) => {
   try {
-    const { from, to } = req.query;
+    const { from, to, limit: limitParam, offset: offsetParam } = req.query;
+    const limit = Math.min(Math.max(parseInt(limitParam, 10) || 50, 1), 100);
+    const offset = Math.max(parseInt(offsetParam, 10) || 0, 0);
     let query = `
-      SELECT e.id, e.what, e."where", e."when", e.datetime, e.free_food, e.free_drinks, e.free_entry, e.event_link, e.created_at, e.updated_at,
+      SELECT e.id, e.what, e."where", e."when", e.datetime, e.free_food, e.free_drinks, e.free_entry, e.event_link, e.image_url, e.description, e.created_at, e.updated_at,
              (SELECT json_agg(json_build_object('user_id', u.id, 'name', u.name, 'status', r.status))
               FROM rsvps r JOIN users u ON r.user_id = u.id WHERE r.event_id = e.id) AS rsvps
       FROM events e
-      ORDER BY e.datetime ASC
     `;
     const params = [];
     if (from || to) {
@@ -31,8 +32,10 @@ router.get('/', async (req, res, next) => {
         params.push(to);
         conditions.push(`e.datetime <= $${params.length}`);
       }
-      query = query.replace('ORDER BY', `WHERE ${conditions.join(' AND ')} ORDER BY`);
+      query += ` WHERE ${conditions.join(' AND ')}`;
     }
+    query += ` ORDER BY e.datetime ASC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+    params.push(limit, offset);
     const result = await pool.query(query, params);
     const events = result.rows.map((row) => ({
       id: row.id,
@@ -44,6 +47,8 @@ router.get('/', async (req, res, next) => {
       free_drinks: row.free_drinks ?? false,
       free_entry: row.free_entry ?? false,
       event_link: row.event_link ?? null,
+      image_url: row.image_url ?? null,
+      description: row.description ?? null,
       created_at: row.created_at,
       updated_at: row.updated_at,
       rsvps: row.rsvps?.filter(Boolean) || [],
@@ -61,7 +66,7 @@ router.get('/:id', param('id').isUUID(), async (req, res, next) => {
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
     const { id } = req.params;
     const result = await pool.query(
-      `SELECT e.id, e.what, e."where", e."when", e.datetime, e.free_food, e.free_drinks, e.free_entry, e.event_link, e.created_at, e.updated_at,
+      `SELECT e.id, e.what, e."where", e."when", e.datetime, e.free_food, e.free_drinks, e.free_entry, e.event_link, e.image_url, e.description, e.created_at, e.updated_at,
               (SELECT json_agg(json_build_object('user_id', u.id, 'name', u.name, 'status', r.status))
                FROM rsvps r JOIN users u ON r.user_id = u.id WHERE r.event_id = e.id) AS rsvps
        FROM events e WHERE e.id = $1`,
@@ -81,6 +86,8 @@ router.get('/:id', param('id').isUUID(), async (req, res, next) => {
       free_drinks: row.free_drinks ?? false,
       free_entry: row.free_entry ?? false,
       event_link: row.event_link ?? null,
+      image_url: row.image_url ?? null,
+      description: row.description ?? null,
       created_at: row.created_at,
       updated_at: row.updated_at,
       rsvps: row.rsvps?.filter(Boolean) || [],

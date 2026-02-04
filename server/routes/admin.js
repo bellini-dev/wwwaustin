@@ -16,6 +16,8 @@ const eventValidation = [
   body('free_entry').optional().isBoolean(),
   body('event_link').optional().trim(),
   body('when').optional().trim(),
+  body('image_url').optional().trim(),
+  body('description').optional().trim(),
 ];
 
 // POST /admin/login – admin only, no signup
@@ -56,7 +58,7 @@ router.get('/me', adminAuth, (req, res) => {
 router.get('/events', adminAuth, async (req, res, next) => {
   try {
     const result = await pool.query(
-      `SELECT e.id, e.what, e."where", e."when", e.datetime, e.free_food, e.free_drinks, e.free_entry, e.event_link, e.created_at, e.updated_at,
+      `SELECT e.id, e.what, e."where", e."when", e.datetime, e.free_food, e.free_drinks, e.free_entry, e.event_link, e.image_url, e.description, e.created_at, e.updated_at,
               (SELECT json_agg(json_build_object('user_id', u.id, 'name', u.name, 'status', r.status))
                FROM rsvps r JOIN users u ON r.user_id = u.id WHERE r.event_id = e.id) AS rsvps
        FROM events e ORDER BY e.datetime ASC`
@@ -74,6 +76,8 @@ router.get('/events', adminAuth, async (req, res, next) => {
         free_drinks: row.free_drinks ?? false,
         free_entry: row.free_entry ?? false,
         event_link: row.event_link ?? null,
+        image_url: row.image_url ?? null,
+        description: row.description ?? null,
         created_at: row.created_at,
         updated_at: row.updated_at,
         rsvps,
@@ -91,14 +95,14 @@ router.post('/events', adminAuth, eventValidation, async (req, res, next) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
-    const { what, where, when: whenText, datetime, free_food, free_drinks, free_entry, event_link } = req.body;
+    const { what, where, when: whenText, datetime, free_food, free_drinks, free_entry, event_link, image_url, description } = req.body;
     const result = await pool.query(
-      `INSERT INTO events (what, "where", "when", datetime, free_food, free_drinks, free_entry, event_link) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-       RETURNING id, what, "where", "when", datetime, free_food, free_drinks, free_entry, event_link, created_at, updated_at`,
-      [what, where, (whenText && whenText.trim()) || null, datetime, !!free_food, !!free_drinks, !!free_entry, (event_link && event_link.trim()) || null]
+      `INSERT INTO events (what, "where", "when", datetime, free_food, free_drinks, free_entry, event_link, image_url, description) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       RETURNING id, what, "where", "when", datetime, free_food, free_drinks, free_entry, event_link, image_url, description, created_at, updated_at`,
+      [what, where, (whenText && whenText.trim()) || null, datetime, !!free_food, !!free_drinks, !!free_entry, (event_link && event_link.trim()) || null, (image_url && image_url.trim()) || null, (description && description.trim()) || null]
     );
     const row = result.rows[0];
-    res.status(201).json({ ...row, when: row.when ?? null, free_food: row.free_food ?? false, free_drinks: row.free_drinks ?? false, free_entry: row.free_entry ?? false, event_link: row.event_link ?? null });
+    res.status(201).json({ ...row, when: row.when ?? null, free_food: row.free_food ?? false, free_drinks: row.free_drinks ?? false, free_entry: row.free_entry ?? false, event_link: row.event_link ?? null, image_url: row.image_url ?? null, description: row.description ?? null });
   } catch (err) {
     next(err);
   }
@@ -110,17 +114,17 @@ router.put('/events/:id', adminAuth, param('id').isUUID(), eventValidation, asyn
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
     const { id } = req.params;
-    const { what, where, when: whenText, datetime, free_food, free_drinks, free_entry, event_link } = req.body;
+    const { what, where, when: whenText, datetime, free_food, free_drinks, free_entry, event_link, image_url, description } = req.body;
     const result = await pool.query(
       `UPDATE events SET what = $1, "where" = $2, "when" = $3, datetime = $4,
        free_food = COALESCE($5::boolean, free_food), free_drinks = COALESCE($6::boolean, free_drinks),
-       free_entry = COALESCE($7::boolean, free_entry), event_link = $8, updated_at = NOW() WHERE id = $9
-       RETURNING id, what, "where", "when", datetime, free_food, free_drinks, free_entry, event_link, created_at, updated_at`,
-      [what, where, whenText != null ? (String(whenText).trim() || null) : undefined, datetime, free_food === undefined ? null : !!free_food, free_drinks === undefined ? null : !!free_drinks, free_entry === undefined ? null : !!free_entry, (event_link != null && String(event_link).trim() !== '' ? String(event_link).trim() : null), id]
+       free_entry = COALESCE($7::boolean, free_entry), event_link = $8, image_url = $9, description = $10, updated_at = NOW() WHERE id = $11
+       RETURNING id, what, "where", "when", datetime, free_food, free_drinks, free_entry, event_link, image_url, description, created_at, updated_at`,
+      [what, where, whenText != null ? (String(whenText).trim() || null) : undefined, datetime, free_food === undefined ? null : !!free_food, free_drinks === undefined ? null : !!free_drinks, free_entry === undefined ? null : !!free_entry, (event_link != null && String(event_link).trim() !== '' ? String(event_link).trim() : null), (image_url != null && String(image_url).trim() !== '' ? String(image_url).trim() : null), (description != null && String(description).trim() !== '' ? String(description).trim() : null), id]
     );
     if (result.rows.length === 0) return res.status(404).json({ error: 'Event not found' });
     const row = result.rows[0];
-    res.json({ ...row, when: row.when ?? null, free_food: row.free_food ?? false, free_drinks: row.free_drinks ?? false, free_entry: row.free_entry ?? false, event_link: row.event_link ?? null });
+    res.json({ ...row, when: row.when ?? null, free_food: row.free_food ?? false, free_drinks: row.free_drinks ?? false, free_entry: row.free_entry ?? false, event_link: row.event_link ?? null, image_url: row.image_url ?? null, description: row.description ?? null });
   } catch (err) {
     next(err);
   }

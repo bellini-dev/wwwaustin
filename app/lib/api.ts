@@ -11,6 +11,8 @@ export type Event = {
   free_drinks?: boolean;
   free_entry?: boolean;
   event_link?: string | null;
+  image_url?: string | null;
+  description?: string | null;
   created_at: string;
   updated_at: string;
   rsvps?: { user_id: string; name: string | null; status: 'interested' }[];
@@ -36,8 +38,14 @@ export async function api<T>(
   return data as T;
 }
 
-export async function getEvents(token?: string): Promise<Event[]> {
-  return api<Event[]>('/events', { token });
+export async function getEvents(
+  token?: string,
+  options?: { limit?: number; offset?: number }
+): Promise<Event[]> {
+  const limit = options?.limit ?? 50;
+  const offset = options?.offset ?? 0;
+  const q = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+  return api<Event[]>(`/events?${q}`, { token });
 }
 
 export async function getEvent(id: string, token?: string): Promise<Event> {

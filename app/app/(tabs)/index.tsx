@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Image,
   Pressable,
   RefreshControl,
   StyleSheet,
@@ -10,7 +11,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { InterestedAvatars } from '@/components/interested-avatars';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuth } from '@/context/auth-context';
 import { Blue } from '@/constants/theme';
 import type { Event } from '@/lib/api';
@@ -32,13 +33,15 @@ function EventCard({
   event,
   token,
   userId,
+  userName,
   onRsvpChange,
   onPressDetails,
 }: {
   event: Event;
   token: string;
   userId: string;
-  onRsvpChange: () => void;
+  userName: string | null;
+  onRsvpChange: (eventId: string, interested: boolean) => void;
   onPressDetails: () => void;
 }) {
   const [loading, setLoading] = useState(false);
@@ -49,7 +52,7 @@ function EventCard({
     setLoading(true);
     try {
       await rsvpEvent(event.id, token);
-      onRsvpChange();
+      onRsvpChange(event.id, true);
     } finally {
       setLoading(false);
     }
@@ -60,45 +63,59 @@ function EventCard({
     setLoading(true);
     try {
       await removeRsvp(event.id, token);
-      onRsvpChange();
+      onRsvpChange(event.id, false);
     } finally {
       setLoading(false);
     }
   }, [event.id, token, loading, onRsvpChange]);
 
+  const interestedCount = event.rsvps?.filter((r) => r.status === 'interested').length ?? 0;
+  const descriptionText = event.description?.trim() || event.what;
+
   return (
     <View style={styles.card}>
-      <Pressable onPress={onPressDetails} style={styles.cardDetails}>
-        <Text style={styles.what}>{event.what}</Text>
-        <Text style={styles.where}>{event.where}</Text>
-        <Text style={styles.datetime}>
-          {event.when?.trim() ? event.when.trim() : formatDate(event.datetime)}
+      <Pressable onPress={onPressDetails} style={styles.cardPressable}>
+        <Image
+          source={
+            event.image_url
+              ? { uri: event.image_url }
+              : require('@/assets/images/austin_skyline.jpg')
+          }
+          style={styles.cardImage}
+          resizeMode="cover"
+        />
+        <Text style={styles.cardDescription} numberOfLines={6}>
+          {descriptionText}
         </Text>
-      </Pressable>
-      <View style={styles.rsvpRow}>
-        <Pressable
-          style={[
-            styles.rsvpBtn,
-            myRsvp?.status === 'interested' && styles.rsvpBtnActive,
-            loading && styles.rsvpBtnDisabled,
-          ]}
-          onPress={() => (myRsvp?.status === 'interested' ? clearRsvp() : setInterested())}
-          disabled={loading}
-        >
-          <Text style={[styles.rsvpBtnText, myRsvp?.status === 'interested' && styles.rsvpBtnTextActive]}>
-            {myRsvp?.status === 'interested' ? "I'm Interested" : 'Interested'}
-          </Text>
-        </Pressable>
-        <View style={styles.perksList}>
-          {event.free_food && <Text style={styles.perkText}>Free Food!</Text>}
-          {event.free_drinks && <Text style={styles.perkText}>Free Drinks!</Text>}
-          {event.free_entry && <Text style={styles.perkText}>Free Entry!</Text>}
+        <View style={styles.cardFooter}>
+          <View style={styles.cardMeta}>
+            <Text style={styles.cardMetaLine}>{event.where}</Text>
+            <Text style={styles.cardMetaLine}>
+              {event.when?.trim() ? event.when.trim() : formatDate(event.datetime)}
+            </Text>
+            <Text style={styles.cardMetaLine}>
+              {interestedCount.toLocaleString()} interested
+            </Text>
+          </View>
+          <Pressable
+            onPress={() => (myRsvp?.status === 'interested' ? clearRsvp() : setInterested())}
+            disabled={loading}
+            style={styles.starBtn}
+            hitSlop={12}
+          >
+            <Ionicons
+              name={myRsvp?.status === 'interested' ? 'star' : 'star-outline'}
+              size={28}
+              color={myRsvp?.status === 'interested' ? '#fff' : 'rgba(255,255,255,0.8)'}
+            />
+          </Pressable>
         </View>
-      </View>
-      <InterestedAvatars rsvps={event.rsvps ?? []} token={token} />
+      </Pressable>
     </View>
   );
 }
+
+const PAGE_SIZE = 15;
 
 export default function FeedScreen() {
   const { user, token, logout } = useAuth();
@@ -106,33 +123,72 @@ export default function FeedScreen() {
   const insets = useSafeAreaInsets();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState('');
 
-  const fetchEvents = useCallback(async () => {
-    try {
-      const list = await getEvents(token ?? undefined);
-      const sorted = [...list].sort(
-        (a, b) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime()
-      );
-      setEvents(sorted);
-      setError('');
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load events');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [token]);
+  const fetchPage = useCallback(
+    async (pageOffset: number, append: boolean) => {
+      try {
+        const list = await getEvents(token ?? undefined, {
+          limit: PAGE_SIZE,
+          offset: pageOffset,
+        });
+        const sorted = [...list].sort(
+          (a, b) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime()
+        );
+        setEvents((prev) => (append ? [...prev, ...sorted] : sorted));
+        setHasMore(list.length >= PAGE_SIZE);
+        setError('');
+      } catch (e) {
+        if (!append) setError(e instanceof Error ? e.message : 'Failed to load events');
+      } finally {
+        setLoading(false);
+        setLoadingMore(false);
+        setRefreshing(false);
+      }
+    },
+    [token]
+  );
+
+  const fetchEvents = useCallback(() => {
+    fetchPage(0, false);
+  }, [fetchPage]);
 
   useEffect(() => {
-    fetchEvents();
-  }, [fetchEvents]);
+    if (user && token) fetchPage(0, false);
+  }, [token, user, user?.id, fetchPage]);
+
+  const loadMore = useCallback(() => {
+    if (loading || loadingMore || !hasMore || events.length === 0) return;
+    setLoadingMore(true);
+    fetchPage(events.length, true);
+  }, [events.length, fetchPage, hasMore, loading, loadingMore]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    fetchEvents();
-  }, [fetchEvents]);
+    setHasMore(true);
+    fetchPage(0, false);
+  }, [fetchPage]);
+
+  const onRsvpChange = useCallback(
+    (eventId: string, interested: boolean) => {
+      if (!user) return;
+      setEvents((prev) =>
+        prev.map((e) => {
+          if (e.id !== eventId) return e;
+          const rsvps = e.rsvps ?? [];
+          const withoutMe = rsvps.filter((r) => r.user_id !== user.id);
+          const withMe = interested
+            ? [...withoutMe, { user_id: user.id, name: user.name ?? null, status: 'interested' as const }]
+            : withoutMe;
+          return { ...e, rsvps: withMe };
+        })
+      );
+    },
+    [user]
+  );
 
   if (!user || !token) {
     return null;
@@ -166,6 +222,15 @@ export default function FeedScreen() {
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Blue.primary} />
           }
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.4}
+          ListFooterComponent={
+            loadingMore ? (
+              <View style={styles.footerLoader}>
+                <ActivityIndicator size="small" color={Blue.primary} />
+              </View>
+            ) : null
+          }
           ListEmptyComponent={
             <View style={styles.empty}>
               <Text style={styles.emptyText}>No events yet</Text>
@@ -176,7 +241,8 @@ export default function FeedScreen() {
               event={item}
               token={token}
               userId={user.id}
-              onRsvpChange={fetchEvents}
+              userName={user.name ?? null}
+              onRsvpChange={onRsvpChange}
               onPressDetails={() => router.push(`/event/${item.id}`)}
             />
           )}
@@ -218,71 +284,46 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: Blue.primary,
     borderRadius: 16,
-    padding: 20,
     marginBottom: 12,
     borderWidth: 1,
     borderColor: Blue.border,
+    overflow: 'hidden',
   },
-  cardDetails: {
-    marginBottom: 4,
+  cardPressable: {
+    flex: 1,
   },
-  what: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#fff',
-    marginBottom: 12,
+  cardImage: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    backgroundColor: 'rgba(0,0,0,0.2)',
   },
-  where: {
+  cardDescription: {
     fontSize: 15,
-    color: 'rgba(255,255,255,0.9)',
-    marginBottom: 8,
+    color: '#fff',
+    lineHeight: 22,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 8,
   },
-  datetime: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.85)',
-    marginBottom: 4,
-    paddingBottom: 12,
-  },
-  rsvpRow: {
+  cardFooter: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.25)',
   },
-  rsvpBtn: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.6)',
-    backgroundColor: 'rgba(255,255,255,0.95)',
-    minWidth: 100,
-    alignItems: 'center',
+  cardMeta: {
+    flex: 1,
   },
-  rsvpBtnActive: {
-    backgroundColor: 'rgba(255,255,255,0.95)',
-    borderColor: 'rgba(255,255,255,0.8)',
+  cardMetaLine: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.9)',
+    marginBottom: 2,
   },
-  rsvpBtnDisabled: {
-    opacity: 0.6,
-  },
-  rsvpBtnText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: Blue.text,
-  },
-  rsvpBtnTextActive: {
-    color: Blue.primary,
-  },
-  perksList: {
-    flexDirection: 'column',
-    gap: 2,
-    alignItems: 'flex-end',
-  },
-  perkText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: 'rgba(255,255,255,0.95)',
+  starBtn: {
+    padding: 4,
   },
   centered: {
     flex: 1,
@@ -313,5 +354,9 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     color: Blue.textSecondary,
+  },
+  footerLoader: {
+    paddingVertical: 16,
+    alignItems: 'center',
   },
 });

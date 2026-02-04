@@ -18,6 +18,8 @@ CREATE TABLE IF NOT EXISTS events (
   free_drinks BOOLEAN DEFAULT FALSE,
   free_entry  BOOLEAN DEFAULT FALSE,
   event_link  TEXT,
+  image_url   TEXT,
+  description TEXT,
   created_at  TIMESTAMPTZ DEFAULT NOW(),
   updated_at  TIMESTAMPTZ DEFAULT NOW()
 );
@@ -28,6 +30,8 @@ ALTER TABLE events ADD COLUMN IF NOT EXISTS free_drinks BOOLEAN DEFAULT FALSE;
 ALTER TABLE events ADD COLUMN IF NOT EXISTS free_entry BOOLEAN DEFAULT FALSE;
 ALTER TABLE events ADD COLUMN IF NOT EXISTS event_link TEXT;
 ALTER TABLE events ADD COLUMN IF NOT EXISTS "when" TEXT;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS image_url TEXT;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS description TEXT;
 
 -- RSVPs: interested per user per event
 CREATE TABLE IF NOT EXISTS rsvps (
