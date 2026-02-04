@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS events (
   what        TEXT NOT NULL,
   "where"     TEXT NOT NULL,
   "when"      TEXT,
-  datetime    TIMESTAMPTZ NOT NULL,
+  datetime    TIMESTAMPTZ,
   free_food   BOOLEAN DEFAULT FALSE,
   free_drinks BOOLEAN DEFAULT FALSE,
   free_entry  BOOLEAN DEFAULT FALSE,
