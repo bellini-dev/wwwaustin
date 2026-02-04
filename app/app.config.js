@@ -15,6 +15,8 @@ export default {
       bundleIdentifier: 'com.bellini.dev.wwwaustin',
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
+        NSCalendarsUsageDescription: 'Allow wwwaustin to add events to your calendar.',
+        NSRemindersUsageDescription: 'Allow wwwaustin to add reminders (optional).',
       },
       appleTeamId: '29D4TTNP95',
       newArchEnabled: true,
@@ -34,6 +36,7 @@ export default {
       edgeToEdgeEnabled: true,
       predictiveBackGestureEnabled: false,
       package: 'com.bellini.dev.wwwaustin',
+      permissions: ['READ_CALENDAR', 'WRITE_CALENDAR'],
     },
     web: {
       output: 'static',
@@ -42,6 +45,7 @@ export default {
     plugins: [
       'expo-router',
       'expo-image-picker',
+      'expo-calendar',
       './plugins/withGoogleMapsApiKey.js',
       [
         'expo-splash-screen',

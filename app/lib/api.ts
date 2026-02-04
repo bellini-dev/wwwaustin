@@ -49,6 +49,11 @@ export async function getEvents(
   return api<Event[]>(`/events?${q}`, { token });
 }
 
+/** Events the current user is interested in (requires auth). */
+export async function getInterestedEvents(token: string): Promise<Event[]> {
+  return api<Event[]>('/events?interested=me&limit=200', { token });
+}
+
 export async function getEvent(id: string, token?: string): Promise<Event> {
   return api<Event>(`/events/${id}`, { token });
 }

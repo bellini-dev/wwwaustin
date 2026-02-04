@@ -1,7 +1,7 @@
 const express = require('express');
 const { body, param, validationResult } = require('express-validator');
 const { pool } = require('../config/db');
-const { auth } = require('../middleware/auth');
+const { auth, optionalAuth } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -9,12 +9,16 @@ const rsvpValidation = [
   body('status').isIn(['interested']).withMessage('status must be "interested"'),
 ];
 
-// GET /events – list events (optional: ?from= & ?to= date range; ?limit= & ?offset= for pagination)
-router.get('/', async (req, res, next) => {
+// GET /events – list events (optional: ?from= & ?to= date range; ?limit= & ?offset= for pagination; ?interested=me with auth = only events user is interested in)
+router.get('/', optionalAuth, async (req, res, next) => {
   try {
-    const { from, to, limit: limitParam, offset: offsetParam } = req.query;
+    const { from, to, limit: limitParam, offset: offsetParam, interested } = req.query;
     const limit = Math.min(Math.max(parseInt(limitParam, 10) || 50, 1), 100);
     const offset = Math.max(parseInt(offsetParam, 10) || 0, 0);
+    const interestedMe = interested === 'me';
+    if (interestedMe && !req.user?.id) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
     let query = `
       SELECT e.id, e.what, e."where", e."when", e.datetime, e.free_food, e.free_drinks, e.free_entry, e.event_link, e.image_url, e.description, e.created_at, e.updated_at,
              (SELECT json_agg(json_build_object('user_id', u.id, 'name', u.name, 'status', r.status))
@@ -22,8 +26,12 @@ router.get('/', async (req, res, next) => {
       FROM events e
     `;
     const params = [];
+    const conditions = [];
+    if (interestedMe) {
+      params.push(req.user.id);
+      conditions.push(`EXISTS (SELECT 1 FROM rsvps r WHERE r.event_id = e.id AND r.user_id = $${params.length})`);
+    }
     if (from || to) {
-      const conditions = [];
       if (from) {
         params.push(from);
         conditions.push(`e.datetime >= $${params.length}`);
@@ -32,6 +40,8 @@ router.get('/', async (req, res, next) => {
         params.push(to);
         conditions.push(`e.datetime <= $${params.length}`);
       }
+    }
+    if (conditions.length) {
       query += ` WHERE ${conditions.join(' AND ')}`;
     }
     query += ` ORDER BY e.datetime ASC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;

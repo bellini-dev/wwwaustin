@@ -28,4 +28,22 @@ async function auth(req, res, next) {
   }
 }
 
-module.exports = { auth };
+/** Like auth but does not 401 when no token; sets req.user only when token is valid. */
+async function optionalAuth(req, res, next) {
+  const authHeader = req.headers.authorization;
+  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  if (!token) return next();
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const result = await pool.query(
+      'SELECT id, email, name FROM users WHERE id = $1',
+      [decoded.userId]
+    );
+    if (result.rows.length > 0) req.user = result.rows[0];
+  } catch (_) {
+    // ignore invalid/expired token
+  }
+  next();
+}
+
+module.exports = { auth, optionalAuth };
