@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Image,
   Pressable,
   SectionList,
@@ -16,10 +17,17 @@ import { Blue } from '@/constants/theme';
 import { useAuth } from '@/context/auth-context';
 import type { Event } from '@/lib/api';
 import { getInterestedEvents, removeRsvp } from '@/lib/api';
+import React from 'react';
 
 function formatSectionDate(iso: string) {
   const d = new Date(iso);
   return d.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
+}
+
+function hasValidDatetime(event: Event): boolean {
+  if (!event.datetime || typeof event.datetime !== 'string') return false;
+  const t = new Date(event.datetime).getTime();
+  return Number.isFinite(t);
 }
 
 function formatTime(iso: string) {
@@ -57,6 +65,17 @@ async function addEventToCalendar(event: Event) {
   const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
   const notes = [event.description?.trim(), event.event_link?.trim()].filter(Boolean).join('\n\n');
 
+  const eventDetails = {
+    calendarId,
+    title: event.what,
+    startDate: startDate.toISOString(),
+    endDate: endDate.toISOString(),
+    location: event.where,
+    notes: notes || undefined,
+    timeZone: undefined,
+  };
+  console.log('[Calendar] createEventAsync details:', JSON.stringify(eventDetails, null, 2));
+
   await Calendar.createEventAsync(calendarId, {
     title: event.what,
     startDate,
@@ -77,7 +96,8 @@ function InterestCard({
   onRemoved: (eventId: string) => void;
 }) {
   const [busy, setBusy] = useState<'remove' | 'calendar' | null>(null);
-  const whenText = event.when?.trim() ? event.when.trim() : `${formatTime(event.datetime)}`;
+  const canAddToCalendar = hasValidDatetime(event);
+  const whenText = event.when?.trim() ? event.when.trim() : (canAddToCalendar ? formatTime(event.datetime) : event.datetime ?? 'No date');
 
   const onPressTrash = useCallback(async () => {
     if (busy) return;
@@ -95,6 +115,17 @@ function InterestCard({
     setBusy('calendar');
     try {
       await addEventToCalendar(event);
+      Alert.alert('Added to Calendar', `${event.what} was added to your calendar.`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Could not add to calendar';
+      Alert.alert(
+        'Could not add to calendar',
+        message === 'Calendar permission not granted'
+          ? 'Please allow calendar access in Settings to add events.'
+          : message === 'No writable calendar found'
+            ? 'No calendar that can be edited was found on this device.'
+            : message
+      );
     } finally {
       setBusy(null);
     }
@@ -102,13 +133,15 @@ function InterestCard({
 
   return (
     <View style={styles.card}>
-      <Image
-        source={
-          event.image_url ? { uri: event.image_url } : require('@/assets/images/austin_skyline.jpg')
-        }
-        style={styles.cardImage}
-        resizeMode="cover"
-      />
+      <View style={styles.cardImageWrap}>
+        <Image
+          source={
+            event.image_url ? { uri: event.image_url } : require('@/assets/images/austin_skyline.jpg')
+          }
+          style={styles.cardImage}
+          resizeMode="contain"
+        />
+      </View>
 
       <View style={styles.cardBody}>
         <Text style={styles.metaLabel}>When</Text>
@@ -128,11 +161,19 @@ function InterestCard({
       <View style={styles.cardActions}>
         <Pressable
           onPress={onPressCalendar}
-          disabled={!!busy}
-          style={({ pressed }) => [styles.iconBtn, pressed && styles.iconBtnPressed]}
+          disabled={!!busy || !canAddToCalendar}
+          style={({ pressed }) => [
+            styles.iconBtn,
+            pressed && canAddToCalendar && styles.iconBtnPressed,
+            !canAddToCalendar && styles.iconBtnDisabled,
+          ]}
           hitSlop={10}
         >
-          <Ionicons name="calendar-outline" size={24} color={Blue.primaryDark} />
+          <Ionicons
+            name="calendar-outline"
+            size={24}
+            color={canAddToCalendar ? Blue.primaryDark : Blue.muted}
+          />
         </Pressable>
         <Pressable
           onPress={onPressTrash}
@@ -177,8 +218,15 @@ export default function InterestsScreen() {
   }, [load, token, user]);
 
   const sections: Section[] = useMemo(() => {
-    const byDay = new Map<string, Event[]>();
+    const withDate: Event[] = [];
+    const withoutDate: Event[] = [];
     for (const ev of events) {
+      if (hasValidDatetime(ev)) withDate.push(ev);
+      else withoutDate.push(ev);
+    }
+
+    const byDay = new Map<string, Event[]>();
+    for (const ev of withDate) {
       const key = new Date(ev.datetime).toDateString();
       const arr = byDay.get(key) ?? [];
       arr.push(ev);
@@ -194,6 +242,9 @@ export default function InterestsScreen() {
     for (const key of sortedKeys) {
       const arr = byDay.get(key) ?? [];
       out.push({ title: formatSectionDate(arr[0]?.datetime ?? key), data: arr });
+    }
+    if (withoutDate.length > 0) {
+      out.push({ title: 'Others', data: withoutDate });
     }
     return out;
   }, [events]);
@@ -284,10 +335,17 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginBottom: 12,
   },
-  cardImage: {
+  cardImageWrap: {
     width: 92,
-    height: 92,
-    backgroundColor: 'rgba(0,0,0,0.06)',
+    height: 128,
+    backgroundColor: '#000',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  cardImage: {
+    width: 102,
+    height: 102,
   },
   cardBody: {
     flex: 1,
@@ -324,6 +382,9 @@ const styles = StyleSheet.create({
   },
   iconBtnPressed: {
     opacity: 0.7,
+  },
+  iconBtnDisabled: {
+    opacity: 0.6,
   },
   centered: {
     flex: 1,
