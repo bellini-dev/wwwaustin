@@ -1,5 +1,6 @@
+import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -213,9 +214,12 @@ export default function InterestsScreen() {
     }
   }, [token]);
 
-  useEffect(() => {
-    if (user && token) load();
-  }, [load, token, user]);
+  // Reload whenever the Favorites tab is focused (e.g. after navigating back from Feed)
+  useFocusEffect(
+    useCallback(() => {
+      if (user && token) load();
+    }, [load, token, user])
+  );
 
   const sections: Section[] = useMemo(() => {
     const withDate: Event[] = [];

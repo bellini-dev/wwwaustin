@@ -14,7 +14,7 @@ app.use(express.json({ limit: '20mb' }));
 
 app.use((req, res, next) => {
   const ts = new Date().toISOString();
-  console.log(`${ts} [${req.method}] ${req.path}`);
+  console.log(`${ts} [${req.method}] ${req.originalUrl || req.path}`);
   next();
 });
 
@@ -36,4 +36,5 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
+  console.log('(Requests will log above. If you see no logs when using the app, the app may be using a different API URL—check EXPO_PUBLIC_API_URL.)');
 });

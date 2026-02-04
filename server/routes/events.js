@@ -13,11 +13,21 @@ const rsvpValidation = [
 router.get('/', optionalAuth, async (req, res, next) => {
   try {
     const { from, to, limit: limitParam, offset: offsetParam, interested } = req.query;
+    // Support array from some clients: ?interested=me or interested as array
+    const interestedVal = Array.isArray(interested) ? interested[0] : interested;
+    const interestedMe = String(interestedVal || '').toLowerCase() === 'me';
+
     const limit = Math.min(Math.max(parseInt(limitParam, 10) || 50, 1), 100);
     const offset = Math.max(parseInt(offsetParam, 10) || 0, 0);
-    const interestedMe = interested === 'me';
-    if (interestedMe && !req.user?.id) {
-      return res.status(401).json({ error: 'Authentication required' });
+
+    // Debug: what did we receive (remove or reduce in production)
+    console.log('[GET /events] query:', JSON.stringify(req.query), '| interestedMe:', interestedMe, '| hasUser:', !!req.user);
+
+    if (interestedMe) {
+      if (!req.user?.id) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
+      console.log('[GET /events] filtering by RSVPs for user', req.user.id);
     }
     let query = `
       SELECT e.id, e.what, e."where", e."when", e.datetime, e.free_food, e.free_drinks, e.free_entry, e.event_link, e.image_url, e.description, e.created_at, e.updated_at,
