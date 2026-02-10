@@ -201,6 +201,32 @@ router.get('/me/avatar', auth, async (req, res, next) => {
   }
 });
 
+// POST /auth/me/push-token – register Expo push token for the current user (auth required)
+router.post(
+  '/me/push-token',
+  auth,
+  body('token').notEmpty().trim().withMessage('token is required'),
+  async (req, res, next) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+      const userId = req.user.id;
+      const token = req.body.token;
+      if (!token.startsWith('ExponentPushToken[') && !token.startsWith('ExpoPushToken[')) {
+        return res.status(400).json({ error: 'Invalid Expo push token format' });
+      }
+      await pool.query(
+        `INSERT INTO push_tokens (user_id, token) VALUES ($1, $2)
+         ON CONFLICT (token) DO UPDATE SET user_id = $1, created_at = NOW()`,
+        [userId, token]
+      );
+      res.json({ ok: true });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
 // GET /auth/users/:id/avatar – get another user's profile picture (auth required)
 router.get('/users/:id/avatar', auth, param('id').isUUID(), async (req, res, next) => {
   try {

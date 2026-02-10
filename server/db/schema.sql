@@ -64,3 +64,13 @@ CREATE TABLE IF NOT EXISTS admin_users (
   password_hash TEXT NOT NULL,
   created_at    TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Push tokens for app users (Expo push tokens); one user can have multiple devices
+CREATE TABLE IF NOT EXISTS push_tokens (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  token      TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(token)
+);
+CREATE INDEX IF NOT EXISTS idx_push_tokens_user_id ON push_tokens(user_id);

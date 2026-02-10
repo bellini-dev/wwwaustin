@@ -5,6 +5,7 @@ const { body, param, validationResult } = require('express-validator');
 const { pool } = require('../config/db');
 const { adminAuth } = require('../middleware/adminAuth');
 const { uploadEventImage } = require('../config/cloudinary');
+const { sendExpoPush } = require('../lib/push');
 
 const router = express.Router();
 
@@ -161,6 +162,26 @@ router.post('/events', adminAuth, eventValidation, async (req, res, next) => {
       [what, where, (whenText && whenText.trim()) || null, datetime, !!free_food, !!free_drinks, !!free_entry, (event_link && event_link.trim()) || null, (image_url && image_url.trim()) || null, (description && description.trim()) || null]
     );
     const row = result.rows[0];
+
+    // Notify app users that a new event was added (fire-and-forget)
+    pool.query('SELECT token FROM push_tokens').then((tokRes) => {
+      const tokens = tokRes.rows.map((r) => r.token).filter(Boolean);
+      console.log('[push] event created, registered tokens:', tokens.length);
+      if (tokens.length === 0) {
+        console.log('[push] no tokens registered — app users must open the app while logged in to register for push');
+        return;
+      }
+      const eventTitle = (row.what || 'New event').slice(0, 50);
+      sendExpoPush(tokens, {
+        title: 'New event added',
+        body: eventTitle + (row.where ? ` at ${String(row.where).slice(0, 30)}` : ''),
+        data: { type: 'new_event', eventId: row.id },
+      }).then(({ sent, failed }) => {
+        if (sent) console.log('[push] notification sent to', sent, 'device(s)');
+        if (failed.length) console.error('[push] failed for', failed.length, 'token(s)', failed[0] ? '(e.g. ' + String(failed[0]).slice(0, 40) + '...)' : '');
+      }).catch((e) => console.error('[push] send error', e.message));
+    }).catch((e) => console.error('[push] fetch tokens error', e.message));
+
     res.status(201).json({ ...row, when: row.when ?? null, free_food: row.free_food ?? false, free_drinks: row.free_drinks ?? false, free_entry: row.free_entry ?? false, event_link: row.event_link ?? null, image_url: row.image_url ?? null, description: row.description ?? null });
   } catch (err) {
     next(err);

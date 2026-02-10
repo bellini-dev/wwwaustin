@@ -9,7 +9,7 @@ export default {
     icon: './assets/images/icon.png',
     scheme: 'wwwaustin',
     userInterfaceStyle: 'automatic',
-    newArchEnabled: false,
+    newArchEnabled: true,
     ios: {
       supportsTablet: true,
       bundleIdentifier: 'com.bellini.dev.wwwaustin',
@@ -17,9 +17,13 @@ export default {
         ITSAppUsesNonExemptEncryption: false,
         NSCalendarsUsageDescription: 'Allow wwwaustin to add events to your calendar.',
         NSRemindersUsageDescription: 'Allow wwwaustin to add reminders (optional).',
+        UIBackgroundModes: ['remote-notification'],
       },
       appleTeamId: '29D4TTNP95',
       newArchEnabled: true,
+      entitlements: {
+        "aps-environment": "development"
+      }
     },
     android: {
       adaptiveIcon: {
@@ -59,6 +63,7 @@ export default {
           },
         },
       ],
+      ['expo-notifications', {}],
     ],
     experiments: {
       typedRoutes: true,

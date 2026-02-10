@@ -195,9 +195,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   footer: {
+    alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'center',
-    alignItems: 'center',
+    marginBottom: 32
   },
   footerText: {
     color: 'rgba(255,255,255,0.9)',

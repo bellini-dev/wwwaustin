@@ -47,3 +47,5 @@ app-example
 .env.production
 .env.staging
 .env*.local
+
+app/austin-87e07-firebase-adminsdk-fbsvc-104a3b19e0.json

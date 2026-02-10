@@ -74,6 +74,15 @@ export async function removeRsvp(eventId: string, token: string): Promise<void> 
   await api(`/events/${eventId}/rsvp`, { method: 'DELETE', token });
 }
 
+/** Register Expo push token with the backend for receiving new-event notifications. */
+export async function registerPushToken(pushToken: string, authToken: string): Promise<void> {
+  await api('/auth/me/push-token', {
+    method: 'POST',
+    body: JSON.stringify({ token: pushToken }),
+    token: authToken,
+  });
+}
+
 /** Fetch a user's avatar and return as data URI, or null if none / error. */
 export async function getAvatarDataUri(userId: string, token: string): Promise<string | null> {
   try {
